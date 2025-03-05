@@ -20,6 +20,6 @@ contract Vault is ERC4626Upgradeable, Ownable2StepUpgradeable {
             string.concat("Vault ", IERC20Metadata(_asset).name()),
             string.concat("VAULT ", IERC20Metadata(_asset).symbol())
             );
-        __Ownable2Step_init();
+        __Ownable_init(msg.sender);
     }
 }

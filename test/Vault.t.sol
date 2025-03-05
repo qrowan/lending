@@ -28,6 +28,7 @@ contract VaultTest is TestUtils {
         ));
 
         (user,) = makeAddrAndKey("user");
+        vm.stopPrank();
     }
 
     function test_metadata() public {
