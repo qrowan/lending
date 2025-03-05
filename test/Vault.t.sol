@@ -5,6 +5,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {Vault} from "../src/Vault.sol";
 import {ERC20Mock} from "openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
 import {TransparentUpgradeableProxy} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {IntrestRate} from "../src/constants/IntrestRate.sol";
 import {TestUtils} from "./TestUtils.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
 
@@ -78,5 +79,12 @@ contract VaultTest is TestUtils {
 
     function estimateBalance(address _user) public view returns (uint256) {
         return asset.balanceOf(_user) + vault.previewRedeem(vault.balanceOf(_user));
+    }
+
+    function test_interest_rate() public {
+        uint256 interestRatePerSecond = IntrestRate.INTEREST_RATE_15;
+        uint256 duration = 86400 * 365;
+        uint256 interestRate = IntrestRate.getIntrestRateForDuration(interestRatePerSecond, duration);
+        console.log("interestRate", fromUnit(interestRate, 27, 4));
     }
 }
