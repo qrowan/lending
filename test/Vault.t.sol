@@ -31,25 +31,33 @@ contract VaultTest is TestUtils {
         vm.stopPrank();
     }
 
-    function test_metadata() public {
+    function test_metadata() public view {
         console.log("name", vault.name());
         console.log("symbol", vault.symbol());
         console.log("decimals", vault.decimals());
     }
 
     function test_deposit() public {
-        vm.startPrank(user);
-        deal(address(asset), user, 1000);
-        asset.approve(address(vault), 1000);
-        vault.deposit(100, user);
-        assertEq(vault.previewRedeem(vault.balanceOf(user)), 100);
-        vm.stopPrank();
+        _test_deposit(1 ether);
     }
 
     function test_withdraw() public {
-        test_deposit();
+        _test_withdraw(1 ether);
+    }
+
+    function _test_deposit(uint256 amount) private {
         vm.startPrank(user);
-        vault.withdraw(100, user, user);
+        deal(address(asset), user, amount);
+        asset.approve(address(vault), amount);
+        vault.deposit(amount, user);
+        assertEq(vault.previewRedeem(vault.balanceOf(user)), amount);
+        vm.stopPrank();
+    }
+
+    function _test_withdraw(uint256 amount) private {
+        _test_deposit(amount);
+        vm.startPrank(user);
+        vault.withdraw(amount, user, user);
         assertEq(vault.previewRedeem(vault.balanceOf(user)), 0);
         vm.stopPrank();
     }
@@ -78,14 +86,19 @@ contract VaultTest is TestUtils {
     }
 
 
-    function estimateBalance(address _user) public view returns (uint256) {
+    function estimateBalance(address _user) private view returns (uint256) {
         return asset.balanceOf(_user) + vault.previewRedeem(vault.balanceOf(_user));
     }
 
-    function test_interest_rate() public {
-        uint256 interestRatePerSecond = IntrestRate.INTEREST_RATE_15;
-        uint256 duration = 86400 * 365;
-        uint256 interestRate = IntrestRate.getIntrestRateForDuration(interestRatePerSecond, duration);
-        console.log("interestRate", fromUnit(interestRate, 27, 4));
+    function test_borrow() public {
+        _test_deposit(1 ether);
+        uint interestRate = IntrestRate.getIntrestRateForDuration(vault.interestRatePerSecond(), 86400 * 365);
+        uint lentAmount = 0.1 ether;
+        vm.startPrank(deployer);
+        vault.borrow(lentAmount);
+        vm.stopPrank();
+        assertEq(vault.lentAssets(), lentAmount);
+        _timeElapse(86400 * 365);
+        assertEq(vault.lentAssets(), lentAmount + lentAmount * interestRate / IntrestRate.BASE);
     }
 }
