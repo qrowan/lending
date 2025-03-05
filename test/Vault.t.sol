@@ -5,22 +5,26 @@ import {Test, console} from "forge-std/Test.sol";
 import {Vault} from "../src/Vault.sol";
 import {ERC20Mock} from "openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
 import {TransparentUpgradeableProxy} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {TestUtils} from "./TestUtils.sol";
+import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
 
-contract VaultTest is Test {
+contract VaultTest is TestUtils {
     Vault public vault;
     ERC20Mock public asset;
     address public user;
+    address public deployer;
 
     function setUp() public {
+        (deployer,) = makeAddrAndKey("deployer");
+        vm.startPrank(deployer);
+        ProxyAdmin proxyAdmin = new ProxyAdmin(deployer);
         asset = new ERC20Mock();
         Vault _logic = new Vault();
-        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
+        vault = Vault(_makeProxy(
+            proxyAdmin,
             address(_logic),
-            address(this),
             abi.encodeWithSelector(Vault.initialize.selector, address(asset))
-        );
-        address proxyAddress = address(proxy);
-        vault = Vault(proxyAddress);
+        ));
 
         (user,) = makeAddrAndKey("user");
     }
@@ -72,7 +76,7 @@ contract VaultTest is Test {
     }
 
 
-    function estimateBalance(address user) public view returns (uint256) {
-        return asset.balanceOf(user) + vault.previewRedeem(vault.balanceOf(user));
+    function estimateBalance(address _user) public view returns (uint256) {
+        return asset.balanceOf(_user) + vault.previewRedeem(vault.balanceOf(_user));
     }
 }
