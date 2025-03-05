@@ -36,7 +36,7 @@ contract VaultTest is Test {
         deal(address(asset), user, 1000);
         asset.approve(address(vault), 1000);
         vault.deposit(100, user);
-        assertEq(vault.balanceOf(user), 100);
+        assertEq(vault.previewRedeem(vault.balanceOf(user)), 100);
         vm.stopPrank();
     }
 
@@ -44,7 +44,35 @@ contract VaultTest is Test {
         test_deposit();
         vm.startPrank(user);
         vault.withdraw(100, user, user);
-        assertEq(vault.balanceOf(user), 0);
+        assertEq(vault.previewRedeem(vault.balanceOf(user)), 0);
         vm.stopPrank();
+    }
+
+    function test_prevent_inflation_attack() public {
+        (address attacker,) = makeAddrAndKey("attacker");
+        inflaction_attack(attacker);
+        deal(address(asset), user, 100e18);
+        uint estimatedBefore = estimateBalance(user);
+        vm.startPrank(user);
+        asset.approve(address(vault), type(uint256).max);
+        vault.deposit(100e18, user);
+        vm.stopPrank();
+        uint estimatedAfter = estimateBalance(user);
+        assertGt(estimatedAfter, estimatedBefore * 99 / 100, "attacked");
+    }
+
+    function inflaction_attack(address attacker) private {
+        deal(address(asset), attacker, 100e18 + 1);
+        console.log("[inflation attack] attacker deposits 1 wei, transfers 100e18");
+        vm.startPrank(attacker);
+        asset.approve(address(vault), type(uint256).max);
+        vault.deposit(1, attacker);
+        asset.transfer(address(vault), 100e18);
+        vm.stopPrank();
+    }
+
+
+    function estimateBalance(address user) public view returns (uint256) {
+        return asset.balanceOf(user) + vault.previewRedeem(vault.balanceOf(user));
     }
 }
