@@ -13,7 +13,7 @@ contract PositionTest is Base {
         console.log("symbol", position.symbol());
     }
 
-    function testSupply() public {
+    function test_supply() public {
         uint256 amount = 1 ether;
         _test_deposit(amount);
         vm.startPrank(user);

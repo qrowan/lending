@@ -3,12 +3,14 @@ pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
 import {Vault} from "../src/Vault.sol";
-import {ERC20Mock} from "openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
 import {IntrestRate} from "../src/constants/IntrestRate.sol";
 import {Setup} from "./Setup.t.sol";
+import {ERC20Customized} from "./Setup.t.sol";
 
 contract Base is Setup {
     function _test_deposit(uint256 amount) internal {
+        console.log("asset", address(asset));
+        console.log("vault", address(vault));
         vm.startPrank(user);
         deal(address(asset), user, amount);
         asset.approve(address(vault), amount);
