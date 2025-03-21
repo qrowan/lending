@@ -43,9 +43,18 @@ contract Setup is TestUtils {
     Oracle public oracle;
     address public user;
     address public deployer;
+    address public keeper1;
+    address public keeper2;
+    address public keeper3;
+    uint256 public keeper1Key;
+    uint256 public keeper2Key;
+    uint256 public keeper3Key;
 
     function setUp() public {
         (deployer,) = makeAddrAndKey("deployer");
+        (keeper1, keeper1Key) = makeAddrAndKey("keeper1");
+        (keeper2, keeper2Key) = makeAddrAndKey("keeper2");
+        (keeper3, keeper3Key) = makeAddrAndKey("keeper3");
         vm.startPrank(deployer);
         ProxyAdmin proxyAdmin = new ProxyAdmin(deployer);
         console.log("proxyAdmin", address(proxyAdmin));
@@ -67,7 +76,7 @@ contract Setup is TestUtils {
         oracle = Oracle(_makeProxy(
             proxyAdmin,
             address(_oracle),
-            abi.encodeWithSelector(Oracle.initialize.selector)
+            abi.encodeWithSelector(Oracle.initialize.selector, 3)
         ));
 
         Vault _logic = new Vault();
