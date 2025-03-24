@@ -17,8 +17,7 @@ contract ERC20Customized is ERC20 {
     constructor(
         string memory _name,
         string memory _symbol
-    ) ERC20(_name, _symbol) {
-    }
+    ) ERC20(_name, _symbol) {}
 
     function mint(address to, uint256 amount) external {
         _mint(to, amount);
@@ -38,10 +37,10 @@ contract Setup is TestUtils {
     Position public position;
     Vault[] public vaults;
     ERC20Customized[] public assets;
-    Vault public vault;
-    ERC20Customized public asset;
     Oracle public oracle;
     address public user;
+    address public user1;
+    address public user2;
     address public deployer;
     address public keeper1;
     address public keeper2;
@@ -51,7 +50,7 @@ contract Setup is TestUtils {
     uint256 public keeper3Key;
 
     function setUp() public {
-        (deployer,) = makeAddrAndKey("deployer");
+        (deployer, ) = makeAddrAndKey("deployer");
         (keeper1, keeper1Key) = makeAddrAndKey("keeper1");
         (keeper2, keeper2Key) = makeAddrAndKey("keeper2");
         (keeper3, keeper3Key) = makeAddrAndKey("keeper3");
@@ -61,45 +60,74 @@ contract Setup is TestUtils {
         Core _core = new Core();
         Position _position = new Position();
         Oracle _oracle = new Oracle();
-        core = Core(_makeProxy(
-            proxyAdmin,
-            address(_core),
-            abi.encodeWithSelector(Core.initialize.selector, address(position))
-        ));
-        position = Position(_makeProxy(
-            proxyAdmin,
-            address(_position),
-            abi.encodeWithSelector(Position.initialize.selector, address(core))
-        ));
+        core = Core(
+            _makeProxy(
+                proxyAdmin,
+                address(_core),
+                abi.encodeWithSelector(
+                    Core.initialize.selector,
+                    address(position)
+                )
+            )
+        );
+        position = Position(
+            _makeProxy(
+                proxyAdmin,
+                address(_position),
+                abi.encodeWithSelector(
+                    Position.initialize.selector,
+                    address(core)
+                )
+            )
+        );
         core.setPosition(address(position));
 
-        oracle = Oracle(_makeProxy(
-            proxyAdmin,
-            address(_oracle),
-            abi.encodeWithSelector(Oracle.initialize.selector, 3)
-        ));
+        oracle = Oracle(
+            _makeProxy(
+                proxyAdmin,
+                address(_oracle),
+                abi.encodeWithSelector(Oracle.initialize.selector, 3)
+            )
+        );
 
         Vault _logic = new Vault();
         for (uint i = 0; i < 5; i++) {
             console.log("i", i);
-            string memory name = string(abi.encodePacked("Token", Strings.toString(i)));
-            string memory symbol = string(abi.encodePacked("TOKEN", Strings.toString(i)));
+            string memory name = string(
+                abi.encodePacked("Token", Strings.toString(i))
+            );
+            string memory symbol = string(
+                abi.encodePacked("TOKEN", Strings.toString(i))
+            );
             address _asset = address(new ERC20Customized(name, symbol));
-            address _vault = address(_makeProxy(
-                proxyAdmin,
-                address(_logic),
-                abi.encodeWithSelector(Vault.initialize.selector, address(_asset), address(core))
-            ));
+            address _vault = address(
+                _makeProxy(
+                    proxyAdmin,
+                    address(_logic),
+                    abi.encodeWithSelector(
+                        Vault.initialize.selector,
+                        address(_asset),
+                        address(core)
+                    )
+                )
+            );
+            vm.label(
+                address(_asset),
+                string(abi.encodePacked("TOKEN", Strings.toString(i)))
+            );
+            vm.label(
+                address(_vault),
+                string(abi.encodePacked("VAULT", Strings.toString(i)))
+            );
             assets.push(ERC20Customized(_asset));
             vaults.push(Vault(_vault));
             core.addVault(address(_vault));
             console.log("vault", address(_vault));
         }
 
-        vault = vaults[0];
-        asset = assets[0];
-
-        (user,) = makeAddrAndKey("user");
+        (user, ) = makeAddrAndKey("user");
+        (user1, ) = makeAddrAndKey("user1");
+        (user2, ) = makeAddrAndKey("user2");
         vm.stopPrank();
     }
 }

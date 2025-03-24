@@ -5,25 +5,46 @@ import {Test, console} from "forge-std/Test.sol";
 import {Vault} from "../src/Vault.sol";
 import {IntrestRate} from "../src/constants/IntrestRate.sol";
 import {Setup} from "./Setup.t.sol";
+import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {ERC20Customized} from "./Setup.t.sol";
 
 contract Base is Setup {
-    function _test_deposit(uint256 amount) internal {
-        console.log("asset", address(asset));
+    function _test_deposit(
+        address _user,
+        address _asset,
+        uint256 _amount
+    ) internal {
+        console.log("asset", address(_asset));
+        Vault vault = vaultOf(_asset);
         console.log("vault", address(vault));
-        vm.startPrank(user);
-        deal(address(asset), user, amount);
-        asset.approve(address(vault), amount);
-        vault.deposit(amount, user);
-        assertEq(vault.previewRedeem(vault.balanceOf(user)), amount);
+        vm.startPrank(_user);
+        deal(address(_asset), _user, _amount);
+        IERC20(_asset).approve(address(vault), _amount);
+        vault.deposit(_amount, _user);
+        assertEq(vault.previewRedeem(vault.balanceOf(_user)), _amount);
         vm.stopPrank();
     }
 
-    function _test_withdraw(uint256 amount) internal {
-        _test_deposit(amount);
-        vm.startPrank(user);
-        vault.withdraw(amount, user, user);
-        assertEq(vault.previewRedeem(vault.balanceOf(user)), 0);
+    function _test_withdraw(
+        address _user,
+        address _asset,
+        uint256 _amount
+    ) internal {
+        _test_deposit(_user, _asset, _amount);
+        Vault vault = vaultOf(_asset);
+
+        vm.startPrank(_user);
+        vault.withdraw(_amount, _user, _user);
+        assertEq(vault.previewRedeem(vault.balanceOf(_user)), 0);
         vm.stopPrank();
+    }
+
+    function vaultOf(address _asset) internal view returns (Vault) {
+        for (uint256 i = 0; i < assets.length; i++) {
+            if (address(assets[i]) == _asset) {
+                return vaults[i];
+            }
+        }
+        revert("Asset not found");
     }
 }
