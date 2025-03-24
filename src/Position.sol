@@ -19,7 +19,7 @@ contract Position is ERC721Upgradeable, Ownable2StepUpgradeable {
     }
 
     mapping(uint256 => Position) private positions; // tokenId => position
-    mapping(uint256 => mapping(address => uint)) private collataral; // tokenId => asset => balance
+    mapping(uint256 => mapping(address => int)) private balances; // (tokenId, asset) => balance
     mapping(address => uint) public reserves; // asset => reserve
 
     modifier onlyVault(address _vault) {
@@ -45,25 +45,25 @@ contract Position is ERC721Upgradeable, Ownable2StepUpgradeable {
     }
 
     function supply(uint256 _tokenId, address _vault) external onlyVault(_vault) {
-        uint256 amount = IERC20(_vault).balanceOf(address(this)) - reserves[_vault];
+        int256 amount = int256(IERC20(_vault).balanceOf(address(this)) - reserves[_vault]);
         require(amount > 0, "Amount must be greater than 0");
         Position storage position = positions[_tokenId];
         if (!position.vaults.contains(_vault)) {
             position.vaults.add(_vault);
         }
-        updateBalance(getCollateral(_tokenId, _vault), amount, true);
-        if (getCollateral(_tokenId, _vault) == 0) {
+        updateBalance(getBalance(_tokenId, _vault), amount);
+        if (getBalance(_tokenId, _vault) == 0) {
             position.vaults.remove(_vault);
         }
-        reserves[_vault] += amount;
+        reserves[_vault] += uint256(int256(reserves[_vault]) + amount);
     }
 
     function withdraw(uint256 _tokenId, address _vault, uint256 _amount) external onlyVault(_vault) onlyOwnerOf(_tokenId) {
         updateReserve(_vault);
         require(_amount > 0, "Amount must be greater than 0");
         Position storage position = positions[_tokenId];
-        updateBalance(getCollateral(_tokenId, _vault), _amount, false);
-        if (getCollateral(_tokenId, _vault) == 0) {
+        updateBalance(getBalance(_tokenId, _vault), int256(_amount) * -1);
+        if (getBalance(_tokenId, _vault) == 0) {
             position.vaults.remove(_vault);
         }
         reserves[_vault] -= _amount;
@@ -76,12 +76,8 @@ contract Position is ERC721Upgradeable, Ownable2StepUpgradeable {
         IVault(_vault).borrow(_amount, msg.sender);
     }
 
-    function updateBalance(uint256 _balance, uint256 _amount, bool _add) internal {
-        if (_add) {
-            _balance += _amount;
-        } else {
-            _balance -= _amount;
-        }
+    function updateBalance(int256 _balance, int256 _amount) internal {
+        _balance += _amount;
     }
 
     function updateReserve(address _vault) public {
@@ -89,7 +85,7 @@ contract Position is ERC721Upgradeable, Ownable2StepUpgradeable {
         IERC20(_vault).transfer(core, diff);
     }
 
-    function getCollateral(uint256 _tokenId, address _asset) public view returns (uint256) {
-        return collataral[_tokenId][_asset];
+    function getBalance(uint256 _tokenId, address _asset) public view returns (int256) {
+        return balances[_tokenId][_asset];
     }
 }
