@@ -9,7 +9,6 @@ import {ICore} from "./Core.sol";
 
 interface IVault {
     function borrow(uint256 _borrowAmount, address _receiver) external;
-    function getDebt(uint256 tokenId, address asset) external view returns (uint256);
 }
 
 contract Vault is ERC4626Upgradeable, Ownable2StepUpgradeable {
@@ -56,10 +55,5 @@ contract Vault is ERC4626Upgradeable, Ownable2StepUpgradeable {
     function borrow(uint256 _borrowAmount, address _receiver) public onlyPosition(msg.sender) {
         IERC20(asset()).transfer(_receiver, _borrowAmount);
         updateLentAmount(_borrowAmount, true);
-    }
-
-    function getDebt(uint256 tokenId, address asset) public view returns (uint256) {
-        // TODO: implement
-        return 0;
     }
 }

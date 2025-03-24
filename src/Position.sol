@@ -92,8 +92,4 @@ contract Position is ERC721Upgradeable, Ownable2StepUpgradeable {
     function getCollateral(uint256 _tokenId, address _asset) public view returns (uint256) {
         return collataral[_tokenId][_asset];
     }
-
-    function getDebt(uint256 _tokenId, address _asset) public view returns (uint256) {
-        return IVault(_asset).getDebt(_tokenId, _asset);
-    }
 }
