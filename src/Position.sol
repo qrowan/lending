@@ -16,17 +16,29 @@ contract Position is ERC721Upgradeable, Ownable2StepUpgradeable {
         _disableInitializers();
     }
 
+    error HasDebt();
+    error HasCredit();
+    error NoDebt();
+    error NoCredit();
+
+    enum BalanceType {
+        NO_DEBT,
+        NO_CREDIT,
+        DEBT,
+        CREDIT
+    }
+
     struct Position {
         EnumerableSet.AddressSet vaults;
     }
 
     mapping(uint256 => Position) private positions; // tokenId => position
-    mapping(uint256 => mapping(address => int256)) private balances; // (tokenId, asset) => balance
-    mapping(address => uint) public reserves; // asset => reserve
+    mapping(uint256 => mapping(address => int256)) private balances; // (tokenId, vToken) => balance
+    mapping(address => uint) public reserves; // vToken => reserve
 
-    modifier onlyVault(address _vault) {
+    modifier onlyVault(address _vToken) {
         require(
-            ICore(core).isVault(_vault),
+            ICore(core).isVault(_vToken),
             "Only vault can call this function"
         );
         _;
@@ -37,6 +49,23 @@ contract Position is ERC721Upgradeable, Ownable2StepUpgradeable {
             ownerOf(_tokenId) == msg.sender,
             "Only owner can call this function"
         );
+        _;
+    }
+
+    modifier balanceCheck(
+        uint256 _tokenId,
+        address _vToken,
+        BalanceType _balanceType
+    ) {
+        int256 balance = balances[_tokenId][_vToken];
+
+        if (_balanceType == BalanceType.NO_DEBT && balance < 0)
+            revert HasDebt();
+        if (_balanceType == BalanceType.NO_CREDIT && balance > 0)
+            revert HasCredit();
+        if (_balanceType == BalanceType.DEBT && balance >= 0) revert NoDebt();
+        if (_balanceType == BalanceType.CREDIT && balance <= 0)
+            revert NoCredit();
         _;
     }
 
@@ -54,74 +83,112 @@ contract Position is ERC721Upgradeable, Ownable2StepUpgradeable {
 
     function supply(
         uint256 _tokenId,
-        address _vault
-    ) external onlyVault(_vault) {
+        address _vToken
+    )
+        external
+        onlyVault(_vToken)
+        balanceCheck(_tokenId, _vToken, BalanceType.NO_DEBT)
+    {
         int256 amount = int256(
-            IERC20(_vault).balanceOf(address(this)) - reserves[_vault]
+            IERC20(_vToken).balanceOf(address(this)) - reserves[_vToken]
         );
         require(amount > 0, "Amount must be greater than 0");
-        Position storage position = positions[_tokenId];
-        if (!position.vaults.contains(_vault)) {
-            position.vaults.add(_vault);
-        }
-        updateBalance(getBalance(_tokenId, _vault), amount);
-        if (getBalance(_tokenId, _vault) == 0) {
-            position.vaults.remove(_vault);
-        }
-        reserves[_vault] += uint256(int256(reserves[_vault]) + amount);
+        _addAsset(_tokenId, _vToken);
+        _updateBalance(_tokenId, _vToken, amount);
+        _updateReserve(_vToken, amount);
     }
 
     function withdraw(
         uint256 _tokenId,
-        address _vault,
+        address _vToken,
         uint256 _amount
-    ) external onlyVault(_vault) onlyOwnerOf(_tokenId) {
-        updateReserve(_vault);
+    )
+        external
+        onlyVault(_vToken)
+        onlyOwnerOf(_tokenId)
+        balanceCheck(_tokenId, _vToken, BalanceType.CREDIT)
+    {
+        claim(_vToken);
         require(_amount > 0, "Amount must be greater than 0");
-        Position storage position = positions[_tokenId];
-        updateBalance(getBalance(_tokenId, _vault), int256(_amount) * -1);
-        if (getBalance(_tokenId, _vault) == 0) {
-            position.vaults.remove(_vault);
-        }
-        reserves[_vault] -= _amount;
-        IERC20(_vault).transfer(msg.sender, _amount);
+        _updateBalance(_tokenId, _vToken, int256(_amount) * -1);
+        _updateReserve(_vToken, int256(_amount) * -1);
+        IERC20(_vToken).transfer(msg.sender, _amount);
     }
 
     function borrow(
         uint256 _tokenId,
-        address _vault,
+        address _vToken,
         uint256 _amount
-    ) external onlyVault(_vault) onlyOwnerOf(_tokenId) {
-        updateReserve(_vault);
+    )
+        external
+        onlyVault(_vToken)
+        onlyOwnerOf(_tokenId)
+        balanceCheck(_tokenId, _vToken, BalanceType.NO_CREDIT)
+    {
+        claim(_vToken);
         require(_amount > 0, "Amount must be greater than 0");
-        IVault(_vault).borrow(_amount, msg.sender);
+        _addAsset(_tokenId, _vToken);
+        _updateBalance(_tokenId, _vToken, int256(_amount) * -1);
+        IVault(_vToken).borrow(_amount, msg.sender);
     }
 
-    function updateBalance(int256 _balance, int256 _amount) internal {
-        _balance += _amount;
+    function repay(
+        uint256 _tokenId,
+        address _vToken,
+        uint256 _amount
+    )
+        external
+        onlyVault(_vToken)
+        onlyOwnerOf(_tokenId)
+        balanceCheck(_tokenId, _vToken, BalanceType.DEBT)
+    {
+        require(_amount > 0, "Amount must be greater than 0");
+        _updateBalance(_tokenId, _vToken, int256(_amount));
+        IERC20(_vToken).transferFrom(msg.sender, address(this), _amount);
+        // IVault(_vToken).repay(_amount);
     }
 
-    function updateReserve(address _vault) public {
-        uint256 diff = IERC20(_vault).balanceOf(address(this)) -
-            reserves[_vault];
-        IERC20(_vault).transfer(core, diff);
+    function _updateBalance(
+        uint256 _tokenId,
+        address _vToken,
+        int256 _amount
+    ) private {
+        balances[_tokenId][_vToken] += _amount;
+    }
+
+    function _addAsset(uint256 _tokenId, address _vToken) private {
+        Position storage position = positions[_tokenId];
+        if (!position.vaults.contains(_vToken)) {
+            position.vaults.add(_vToken);
+        }
+    }
+
+    function _updateReserve(address _vToken, int256 _amount) private {
+        reserves[_vToken] = uint256(int256(reserves[_vToken]) + _amount);
+    }
+
+    function claim(address _vToken) public {
+        uint256 diff = IERC20(_vToken).balanceOf(address(this)) -
+            reserves[_vToken];
+        IERC20(_vToken).transfer(msg.sender, diff);
     }
 
     function getBalance(
         uint256 _tokenId,
-        address _asset
+        address _vToken
     ) public view returns (int256) {
-        return balances[_tokenId][_asset];
+        return balances[_tokenId][_vToken];
     }
 
     function getPosition(
         uint256 _tokenId
-    ) public view returns (address[] memory _vaults, int[] memory _balances) {
-        _vaults = new address[](positions[_tokenId].vaults.length());
+    ) public view returns (address[] memory _vTokens, int[] memory _balances) {
+        _vTokens = new address[](positions[_tokenId].vaults.length());
+        _balances = new int[](positions[_tokenId].vaults.length());
         for (uint256 i = 0; i < positions[_tokenId].vaults.length(); i++) {
-            _vaults[i] = positions[_tokenId].vaults.at(i);
-            _balances[i] = balances[_tokenId][_vaults[i]];
+            _vTokens[i] = positions[_tokenId].vaults.at(i);
+            _balances[i] = balances[_tokenId][_vTokens[i]];
         }
-        return (_vaults, _balances);
+        return (_vTokens, _balances);
     }
 }
