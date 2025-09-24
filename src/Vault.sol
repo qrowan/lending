@@ -6,12 +6,14 @@ import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/exten
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {InterestRate} from "./constants/InterestRate.sol";
 import {IConfig} from "./Config.sol";
+import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
 interface IVault {
     function borrow(uint256 _borrowAmount, address _receiver) external;
 }
 
 contract Vault is ERC4626Upgradeable, Ownable2StepUpgradeable {
+    using SafeERC20 for IERC20;
     uint constant NUMBER_OF_DEAD_SHARES = 1000;
     address constant DEAD_ADDRESS =
         address(0x000000000000000000000000000000000000dEaD);
@@ -67,7 +69,7 @@ contract Vault is ERC4626Upgradeable, Ownable2StepUpgradeable {
         uint256 _borrowAmount,
         address _receiver
     ) public onlyPosition(msg.sender) {
-        IERC20(asset()).transfer(_receiver, _borrowAmount);
+        IERC20(asset()).safeTransfer(_receiver, _borrowAmount);
         updateLentAmount(_borrowAmount, true);
     }
 }

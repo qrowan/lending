@@ -7,9 +7,11 @@ import {SignedMath} from "openzeppelin-contracts/contracts/utils/math/SignedMath
 import {IVault} from "./Vault.sol";
 import {IConfig} from "./Config.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 contract Position is ERC721Upgradeable, Ownable2StepUpgradeable {
     using SignedMath for int256;
     using EnumerableSet for EnumerableSet.AddressSet;
+    using SafeERC20 for IERC20;
     uint private _tokenIdCounter;
     address public config;
     constructor() {
@@ -112,7 +114,7 @@ contract Position is ERC721Upgradeable, Ownable2StepUpgradeable {
         require(_amount > 0, "Amount must be greater than 0");
         _updateBalance(_tokenId, _vToken, int256(_amount) * -1);
         _updateReserve(_vToken, int256(_amount) * -1);
-        IERC20(_vToken).transfer(msg.sender, _amount);
+        IERC20(_vToken).safeTransfer(msg.sender, _amount);
     }
 
     function borrow(
@@ -144,7 +146,7 @@ contract Position is ERC721Upgradeable, Ownable2StepUpgradeable {
     {
         require(_amount > 0, "Amount must be greater than 0");
         _updateBalance(_tokenId, _vToken, int256(_amount));
-        IERC20(_vToken).transferFrom(msg.sender, address(this), _amount);
+        IERC20(_vToken).safeTransferFrom(msg.sender, address(this), _amount);
         // IVault(_vToken).repay(_amount);
     }
 
@@ -170,7 +172,7 @@ contract Position is ERC721Upgradeable, Ownable2StepUpgradeable {
     function claim(address _vToken) public {
         uint256 diff = IERC20(_vToken).balanceOf(address(this)) -
             reserves[_vToken];
-        IERC20(_vToken).transfer(msg.sender, diff);
+        IERC20(_vToken).safeTransfer(msg.sender, diff);
     }
 
     function getBalance(
