@@ -8,7 +8,7 @@ import {TransparentUpgradeableProxy} from "openzeppelin-contracts/contracts/prox
 import {IntrestRate} from "../src/constants/IntrestRate.sol";
 import {TestUtils} from "./TestUtils.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
-import {Core} from "../src/Core.sol";
+import {Config} from "../src/Config.sol";
 import {Position} from "../src/Position.sol";
 import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 import {Oracle} from "../src/Oracle.sol";
@@ -33,7 +33,7 @@ contract ERC20Customized is ERC20 {
 }
 
 contract Setup is TestUtils {
-    Core public core;
+    Config public config;
     Position public position;
     Vault[] public vaults;
     ERC20Customized[] public assets;
@@ -57,15 +57,15 @@ contract Setup is TestUtils {
         vm.startPrank(deployer);
         ProxyAdmin proxyAdmin = new ProxyAdmin(deployer);
         console.log("proxyAdmin", address(proxyAdmin));
-        Core _core = new Core();
+        Config _config = new Config();
         Position _position = new Position();
         Oracle _oracle = new Oracle();
-        core = Core(
+        config = Config(
             _makeProxy(
                 proxyAdmin,
-                address(_core),
+                address(_config),
                 abi.encodeWithSelector(
-                    Core.initialize.selector,
+                    Config.initialize.selector,
                     address(position)
                 )
             )
@@ -76,11 +76,11 @@ contract Setup is TestUtils {
                 address(_position),
                 abi.encodeWithSelector(
                     Position.initialize.selector,
-                    address(core)
+                    address(config)
                 )
             )
         );
-        core.setPosition(address(position));
+        config.setPosition(address(position));
 
         oracle = Oracle(
             _makeProxy(
@@ -107,7 +107,7 @@ contract Setup is TestUtils {
                     abi.encodeWithSelector(
                         Vault.initialize.selector,
                         address(_asset),
-                        address(core)
+                        address(config)
                     )
                 )
             );
@@ -121,7 +121,7 @@ contract Setup is TestUtils {
             );
             assets.push(ERC20Customized(_asset));
             vaults.push(Vault(_vault));
-            core.addVault(address(_vault));
+            config.addVault(address(_vault));
             console.log("vault", address(_vault));
         }
 

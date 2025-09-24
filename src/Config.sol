@@ -3,11 +3,11 @@ pragma solidity ^0.8.13;
 import {Ownable2StepUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/access/Ownable2StepUpgradeable.sol";
 import {EnumerableSet} from "openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 
-interface ICore {
+interface IConfig {
     function isPosition(address _position) external view returns (bool);
     function isVault(address _vault) external view returns (bool);
 }
-contract Core is Ownable2StepUpgradeable {
+contract Config is Ownable2StepUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
     address public position;
     EnumerableSet.AddressSet private vaults;

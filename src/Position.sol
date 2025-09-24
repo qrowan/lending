@@ -5,13 +5,13 @@ import {ERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/to
 import {EnumerableSet} from "openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 import {SignedMath} from "openzeppelin-contracts/contracts/utils/math/SignedMath.sol";
 import {IVault} from "./Vault.sol";
-import {ICore} from "./Core.sol";
+import {IConfig} from "./Config.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 contract Position is ERC721Upgradeable, Ownable2StepUpgradeable {
     using SignedMath for int256;
     using EnumerableSet for EnumerableSet.AddressSet;
     uint private _tokenIdCouter;
-    address public core;
+    address public config;
     constructor() {
         _disableInitializers();
     }
@@ -38,7 +38,7 @@ contract Position is ERC721Upgradeable, Ownable2StepUpgradeable {
 
     modifier onlyVault(address _vToken) {
         require(
-            ICore(core).isVault(_vToken),
+            IConfig(config).isVault(_vToken),
             "Only vault can call this function"
         );
         _;
@@ -69,10 +69,10 @@ contract Position is ERC721Upgradeable, Ownable2StepUpgradeable {
         _;
     }
 
-    function initialize(address _core) external initializer {
+    function initialize(address _config) external initializer {
         __ERC721_init("Position", "POSITION");
         __Ownable_init(msg.sender);
-        core = _core;
+        config = _config;
     }
 
     function mint(address _to) external returns (uint256) {
