@@ -4,7 +4,7 @@ import {Ownable2StepUpgradeable} from "openzeppelin-contracts-upgradeable/contra
 import {ERC4626Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol";
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {IntrestRate} from "./constants/IntrestRate.sol";
+import {InterestRate} from "./constants/InterestRate.sol";
 import {IConfig} from "./Config.sol";
 
 interface IVault {
@@ -15,7 +15,7 @@ contract Vault is ERC4626Upgradeable, Ownable2StepUpgradeable {
     uint constant NUMBER_OF_DEAD_SHARES = 1000;
     address constant DEAD_ADDRESS =
         address(0x000000000000000000000000000000000000dEaD);
-    uint public constant interestRatePerSecond = IntrestRate.INTEREST_RATE_15;
+    uint public constant interestRatePerSecond = InterestRate.INTEREST_RATE_15;
     uint public lentAmountStored; // TODO: private
     uint public lastUpdated; // TODO: private
     address public config;
@@ -49,7 +49,7 @@ contract Vault is ERC4626Upgradeable, Ownable2StepUpgradeable {
     function lentAssets() public view returns (uint256) {
         uint duration = block.timestamp - lastUpdated;
         return
-            IntrestRate.calculatePrincipalPlusInterest(
+            InterestRate.calculatePrincipalPlusInterest(
                 lentAmountStored,
                 interestRatePerSecond,
                 duration

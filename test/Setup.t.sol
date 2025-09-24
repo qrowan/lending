@@ -5,7 +5,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {Vault} from "../src/Vault.sol";
 import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {TransparentUpgradeableProxy} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {IntrestRate} from "../src/constants/IntrestRate.sol";
+import {InterestRate} from "../src/constants/InterestRate.sol";
 import {TestUtils} from "./TestUtils.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
 import {Config} from "../src/Config.sol";

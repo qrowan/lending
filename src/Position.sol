@@ -10,7 +10,7 @@ import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 contract Position is ERC721Upgradeable, Ownable2StepUpgradeable {
     using SignedMath for int256;
     using EnumerableSet for EnumerableSet.AddressSet;
-    uint private _tokenIdCouter;
+    uint private _tokenIdCounter;
     address public config;
     constructor() {
         _disableInitializers();
@@ -76,7 +76,7 @@ contract Position is ERC721Upgradeable, Ownable2StepUpgradeable {
     }
 
     function mint(address _to) external returns (uint256) {
-        uint256 tokenId = _tokenIdCouter++;
+        uint256 tokenId = _tokenIdCounter++;
         _mint(_to, tokenId);
         return tokenId;
     }

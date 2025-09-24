@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import {Test, console} from "forge-std/Test.sol";
 import {Vault} from "../src/Vault.sol";
 import {ERC20Mock} from "openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
-import {IntrestRate} from "../src/constants/IntrestRate.sol";
+import {InterestRate} from "../src/constants/InterestRate.sol";
 import {Base} from "./Base.t.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
@@ -68,7 +68,7 @@ contract VaultTest is Base {
         address asset = address(assets[0]);
         Vault vault = vaultOf(asset);
         _test_deposit(user, asset, 1 ether);
-        uint interestRate = IntrestRate.getIntrestRateForDuration(
+        uint interestRate = InterestRate.getInterestRateForDuration(
             vault.interestRatePerSecond(),
             86400 * 365
         );
@@ -80,7 +80,7 @@ contract VaultTest is Base {
         _timeElapse(86400 * 365);
         assertEq(
             vault.lentAssets(),
-            lentAmount + (lentAmount * interestRate) / IntrestRate.BASE
+            lentAmount + (lentAmount * interestRate) / InterestRate.BASE
         );
     }
 }

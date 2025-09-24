@@ -10,7 +10,7 @@ This protocol consists of:
 - **Vault**: ERC4626-compliant lending vaults with interest accrual
 - **Position**: ERC721-based position management with collateral/debt tracking
 - **Oracle**: Price oracle functionality
-- **IntrestRate**: Interest rate calculation library
+- **InterestRate**: Interest rate calculation library
 
 ## Prerequisites
 

@@ -11,7 +11,7 @@ src/
 ├── Position.sol                # ERC721 position management with collateral/debt tracking
 ├── Oracle.sol                  # Price oracle functionality
 └── constants/
-    └── IntrestRate.sol         # Interest rate calculations and constants
+    └── InterestRate.sol         # Interest rate calculations and constants
 test/
 ├── Setup.t.sol                 # Test setup and utilities
 ├── Vault.t.sol                 # Vault contract tests
@@ -91,13 +91,13 @@ modifier balanceCheck(uint256 _tokenId, address _vToken, BalanceType _balanceTyp
 ### Interest Rate Calculations
 
 ```solidity
-// Using IntrestRate library for compound interest
-import {IntrestRate} from "./constants/IntrestRate.sol";
+// Using InterestRate library for compound interest
+import {InterestRate} from "./constants/InterestRate.sol";
 
 // Calculate interest over time
 function lentAssets() public view returns (uint256) {
     uint duration = block.timestamp - lastUpdated;
-    return IntrestRate.calculatePrincipalPlusInterest(
+    return InterestRate.calculatePrincipalPlusInterest(
         lentAmountStored,
         interestRatePerSecond,
         duration
@@ -237,7 +237,7 @@ forge script script/Vault.s.sol:VaultScript --rpc-url $RPC_URL --private-key $PR
 
 ## Interest Rate Constants
 
-Available in `IntrestRate.sol`:
+Available in `InterestRate.sol`:
 
 - `INTEREST_RATE_0_5` - 0.5% APY
 - `INTEREST_RATE_5` - 5% APY
