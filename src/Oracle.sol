@@ -10,7 +10,7 @@ contract Oracle is Ownable2StepUpgradeable, PausableUpgradeable {
     mapping(address => bool) public isKeeper;
     uint public constant PRECISION = 1e18;
     uint public requiredSignatures;
-    
+
     constructor() {
         _disableInitializers();
     }
@@ -32,7 +32,10 @@ contract Oracle is Ownable2StepUpgradeable, PausableUpgradeable {
     }
 
     modifier onlyKeeper() {
-        require(isKeeper[msg.sender], "Oracle: only keeper can call this function");
+        require(
+            isKeeper[msg.sender],
+            "Oracle: only keeper can call this function"
+        );
         _;
     }
 
@@ -40,9 +43,12 @@ contract Oracle is Ownable2StepUpgradeable, PausableUpgradeable {
         referenceData[_asset].heartbeat = _heartbeat;
     }
 
-
     function priceOf(address _asset) external view returns (uint256) {
-        require(block.timestamp - referenceData[_asset].timestamp <= referenceData[_asset].heartbeat, "Oracle: price not updated");
+        require(
+            block.timestamp - referenceData[_asset].timestamp <=
+                referenceData[_asset].heartbeat,
+            "Oracle: price not updated"
+        );
         return referenceData[_asset].lastData;
     }
 
@@ -51,25 +57,30 @@ contract Oracle is Ownable2StepUpgradeable, PausableUpgradeable {
         uint256 _price,
         bytes[] memory _signatures
     ) external onlyKeeper {
-        require(_signatures.length >= requiredSignatures, "Oracle: not enough signatures");
+        require(
+            _signatures.length >= requiredSignatures,
+            "Oracle: not enough signatures"
+        );
         bytes32 message = keccak256(abi.encodePacked(address(_asset), _price));
-        for (uint i = 0; i < _signatures.length; i++) {
-            address signer = ECDSA.recover(message, _signatures[i]);
-            require(isKeeper[signer], "Oracle: invalid signature");
-        }
+        validateSignatures(message, _signatures);
         referenceData[_asset].lastData = _price;
         referenceData[_asset].timestamp = block.timestamp;
     }
 
-    function validateSignatures(bytes32 message, bytes[] memory signatures) internal view returns (bool) {
+    function validateSignatures(
+        bytes32 message,
+        bytes[] memory signatures
+    ) internal view {
+        address[] memory seenSigners = new address[](signatures.length);
+
         for (uint i = 0; i < signatures.length; i++) {
             address signer = ECDSA.recover(message, signatures[i]);
-            if (!isKeeper[signer]) {
-                return false;
+            require(isKeeper[signer], "Oracle: invalid signer");
+            for (uint j = 0; j < i; j++) {
+                require(seenSigners[j] != signer, "Oracle: duplicate signer");
             }
+            seenSigners[i] = signer;
         }
-        
-        return true;
     }
 
     function pause() external onlyOwner {
@@ -79,5 +90,4 @@ contract Oracle is Ownable2StepUpgradeable, PausableUpgradeable {
     function unpause() external onlyOwner {
         _unpause();
     }
-
 }
