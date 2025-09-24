@@ -1,17 +1,35 @@
-## Foundry
+## Rowan-Fi Lending Protocol
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+A decentralized lending protocol built with Solidity and Foundry, featuring upgradeable smart contracts for lending, borrowing, and position management.
 
-Foundry consists of:
+## Overview
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+This protocol consists of:
 
-## Documentation
+- **Config**: Central registry for positions and vaults
+- **Vault**: ERC4626-compliant lending vaults with interest accrual
+- **Position**: ERC721-based position management with collateral/debt tracking
+- **Oracle**: Price oracle functionality
+- **IntrestRate**: Interest rate calculation library
 
-https://book.getfoundry.sh/
+## Prerequisites
+
+- [Foundry](https://book.getfoundry.sh/) toolkit installed
+- Git for dependency management
+
+## Installation
+
+```shell
+# Clone the repository
+git clone <repository-url>
+cd lending
+
+# Install dependencies
+forge install
+
+# Update git submodules
+git submodule update --init --recursive
+```
 
 ## Usage
 
@@ -47,20 +65,60 @@ $ anvil
 
 ### Deploy
 
+Deploy the protocol contracts:
+
 ```shell
-$ forge script script/Vault.s.sol:VaultScript --rpc-url <your_rpc_url> --private-key <your_private_key>
+# Deploy to testnet
+forge script script/Vault.s.sol:VaultScript --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast
+
+# For mainnet deployment, add --verify flag
+forge script script/Vault.s.sol:VaultScript --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast --verify
 ```
 
-### Cast
+### Development
+
+Local development with Anvil:
 
 ```shell
-$ cast <subcommand>
+# Start local node
+anvil
+
+# Deploy to local node (in another terminal)
+forge script script/Vault.s.sol:VaultScript --rpc-url http://localhost:8545 --private-key <anvil_private_key> --broadcast
+```
+
+### Protocol Architecture
+
+The lending protocol uses an upgradeable architecture:
+
+1. **Config Contract**: Manages registered vaults and positions
+2. **Vault Contracts**: ERC4626-compliant lending pools with compound interest
+3. **Position Contract**: ERC721 NFTs representing user positions with collateral/debt tracking
+4. **Interest Rate Library**: Provides per-second compound interest calculations
+
+### Contract Interactions
+
+```shell
+# Example: Check vault total assets
+cast call <VAULT_ADDRESS> "totalAssets()(uint256)" --rpc-url $RPC_URL
+
+# Example: Get position data
+cast call <POSITION_ADDRESS> "getPosition(uint256)(address[],int256[])" <TOKEN_ID> --rpc-url $RPC_URL
 ```
 
 ### Help
 
 ```shell
-$ forge --help
-$ anvil --help
-$ cast --help
+forge --help
+anvil --help
+cast --help
 ```
+
+## Configuration
+
+The protocol is configured for Arbitrum mainnet (see `foundry.toml`):
+
+- RPC URL: https://arb1.arbitrum.io/rpc
+- Solidity version: 0.8.22
+- Optimizer enabled with 200 runs
+- Via IR compilation enabled
