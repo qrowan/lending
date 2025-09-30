@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
-import {Ownable2StepUpgradeable} from "lib/openzeppelin-contracts-upgradeable/contracts/access/Ownable2StepUpgradeable.sol";
-import {ReentrancyGuardUpgradeable} from "lib/openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
-import {ERC721Upgradeable} from "lib/openzeppelin-contracts-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
+import {Ownable2Step} from "lib/openzeppelin-contracts/contracts/access/Ownable2Step.sol";
+import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
+import {ERC721} from "lib/openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
 import {EnumerableSet} from "lib/openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 import {SignedMath} from "lib/openzeppelin-contracts/contracts/utils/math/SignedMath.sol";
 import {IVault} from "../core/Vault.sol";
@@ -13,17 +14,20 @@ import {IPosition} from "./IPosition.sol";
 
 contract MultiAssetPosition is
     IPosition,
-    ERC721Upgradeable,
-    Ownable2StepUpgradeable,
-    ReentrancyGuardUpgradeable
+    ERC721,
+    Ownable2Step,
+    ReentrancyGuard
 {
     using SignedMath for int256;
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
     uint private _tokenIdCounter;
     address public config;
-    constructor() {
-        _disableInitializers();
+
+    constructor(
+        address _config
+    ) Ownable(msg.sender) ERC721("Position", "POSITION") {
+        config = _config;
     }
 
     error HasDebt();
@@ -77,13 +81,6 @@ contract MultiAssetPosition is
         if (_balanceType == BalanceType.CREDIT && balance <= 0)
             revert NoCredit();
         _;
-    }
-
-    function initialize(address _config) external initializer {
-        __ERC721_init("Position", "POSITION");
-        __Ownable_init(msg.sender);
-        __ReentrancyGuard_init();
-        config = _config;
     }
 
     function mint(address _to) external nonReentrant returns (uint256) {

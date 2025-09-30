@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
-import {Ownable2StepUpgradeable} from "lib/openzeppelin-contracts-upgradeable/contracts/access/Ownable2StepUpgradeable.sol";
-import {ReentrancyGuardUpgradeable} from "lib/openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
-import {ERC4626Upgradeable} from "lib/openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol";
+import {Ownable2Step} from "lib/openzeppelin-contracts/contracts/access/Ownable2Step.sol";
+import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
+import {ERC4626} from "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC4626.sol";
+import {ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {IERC20Metadata} from "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {InterestRate} from "../constants/InterestRate.sol";
@@ -15,11 +17,7 @@ interface IVault {
     function asset() external view returns (address);
 }
 
-contract Vault is
-    ERC4626Upgradeable,
-    Ownable2StepUpgradeable,
-    ReentrancyGuardUpgradeable
-{
+contract Vault is ERC4626, Ownable2Step, ReentrancyGuard {
     using SafeERC20 for IERC20;
     uint constant NUMBER_OF_DEAD_SHARES = 1000;
     address constant DEAD_ADDRESS =
@@ -29,20 +27,20 @@ contract Vault is
     uint public lastUpdated; // TODO: private
     address public config;
     mapping(address => bool) public isWhitelisted;
-    constructor() {
-        _disableInitializers();
-    }
 
-    function initialize(address _asset, address _config) external initializer {
-        __ERC4626_init(IERC20(_asset));
-        _mint(DEAD_ADDRESS, NUMBER_OF_DEAD_SHARES);
-        __ERC20_init(
+    constructor(
+        address _asset,
+        address _config
+    )
+        Ownable(msg.sender)
+        ERC4626(IERC20(_asset))
+        ERC20(
             string.concat("Vault ", IERC20Metadata(_asset).name()),
-            string.concat("VAULT ", IERC20Metadata(_asset).symbol())
-        );
-        __Ownable_init(msg.sender);
-        __ReentrancyGuard_init();
+            string.concat("v", IERC20Metadata(_asset).symbol())
+        )
+    {
         config = _config;
+        _mint(DEAD_ADDRESS, NUMBER_OF_DEAD_SHARES);
     }
 
     function setWhitelisted(

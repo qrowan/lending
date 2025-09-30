@@ -34,7 +34,7 @@ contract ERC20Customized is ERC20 {
 
 contract Setup is TestUtils {
     Config public config;
-    MultiAssetPosition public position;
+    MultiAssetPosition public multiAssetPosition;
     Vault[] public vaults;
     ERC20Customized[] public assets;
     Oracle public oracle;
@@ -58,30 +58,11 @@ contract Setup is TestUtils {
         ProxyAdmin proxyAdmin = new ProxyAdmin(deployer);
         console.log("proxyAdmin", address(proxyAdmin));
         vm.label(address(proxyAdmin), "PROXY_ADMIN");
-        Config _config = new Config();
-        MultiAssetPosition _position = new MultiAssetPosition();
+        config = new Config();
+        multiAssetPosition = new MultiAssetPosition(address(config));
         Oracle _oracle = new Oracle();
-        config = Config(
-            _makeProxy(
-                proxyAdmin,
-                address(_config),
-                abi.encodeWithSelector(
-                    Config.initialize.selector,
-                    address(position)
-                )
-            )
-        );
-        position = MultiAssetPosition(
-            _makeProxy(
-                proxyAdmin,
-                address(_position),
-                abi.encodeWithSelector(
-                    MultiAssetPosition.initialize.selector,
-                    address(config)
-                )
-            )
-        );
-        vm.label(address(position), "POSITION");
+
+        vm.label(address(multiAssetPosition), "POSITION");
         vm.label(address(config), "CONFIG");
 
         oracle = Oracle(
@@ -93,7 +74,6 @@ contract Setup is TestUtils {
         );
         vm.label(address(oracle), "ORACLE");
 
-        Vault _logic = new Vault();
         for (uint i = 0; i < 5; i++) {
             console.log("i", i);
             string memory name = string(
@@ -103,17 +83,7 @@ contract Setup is TestUtils {
                 abi.encodePacked("TOKEN", Strings.toString(i))
             );
             address _asset = address(new ERC20Customized(name, symbol));
-            address _vault = address(
-                _makeProxy(
-                    proxyAdmin,
-                    address(_logic),
-                    abi.encodeWithSelector(
-                        Vault.initialize.selector,
-                        address(_asset),
-                        address(config)
-                    )
-                )
-            );
+            address _vault = address(new Vault(_asset, address(config)));
             vm.label(
                 address(_asset),
                 string(abi.encodePacked("TOKEN", Strings.toString(i)))
@@ -127,7 +97,7 @@ contract Setup is TestUtils {
             config.addVault(address(_vault));
             console.log("vault", address(_vault));
 
-            vaults[i].setWhitelisted(address(position), true);
+            vaults[i].setWhitelisted(address(multiAssetPosition), true);
         }
 
         (user, ) = makeAddrAndKey("user");

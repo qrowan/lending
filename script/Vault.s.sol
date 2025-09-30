@@ -12,8 +12,6 @@ contract VaultScript is Script {
     function run() public {
         vm.startBroadcast();
 
-        vault = new Vault();
-
         vm.stopBroadcast();
     }
 }

@@ -73,7 +73,7 @@ contract VaultTest is Base {
             86400 * 365
         );
         uint lentAmount = 0.1 ether;
-        vm.startPrank(address(position));
+        vm.startPrank(address(multiAssetPosition));
         vault.borrow(lentAmount, address(vault));
         vm.stopPrank();
         assertEq(vault.lentAssets(), lentAmount);

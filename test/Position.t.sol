@@ -9,8 +9,8 @@ import {Base} from "./Base.t.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 contract PositionTest is Base {
     function test_metadata() public view {
-        console.log("name", position.name());
-        console.log("symbol", position.symbol());
+        console.log("name", multiAssetPosition.name());
+        console.log("symbol", multiAssetPosition.symbol());
     }
 
     function test_supply() public {
@@ -18,9 +18,9 @@ contract PositionTest is Base {
         uint256 amount = 1 ether;
         _test_deposit(user, asset, amount);
         vm.startPrank(user);
-        uint256 tokenId = position.mint(user);
-        IERC20(address(vaultOf(asset))).transfer(address(position), amount);
-        position.supply(tokenId, address(vaultOf(asset)));
+        uint256 tokenId = multiAssetPosition.mint(user);
+        IERC20(address(vaultOf(asset))).transfer(address(multiAssetPosition), amount);
+        multiAssetPosition.supply(tokenId, address(vaultOf(asset)));
         vm.stopPrank();
     }
 
@@ -28,8 +28,8 @@ contract PositionTest is Base {
         address asset = address(assets[0]);
         test_supply();
         vm.startPrank(user1);
-        uint256 tokenId = position.mint(user1);
-        position.borrow(tokenId, address(vaultOf(asset)), 1 ether);
+        uint256 tokenId = multiAssetPosition.mint(user1);
+        multiAssetPosition.borrow(tokenId, address(vaultOf(asset)), 1 ether);
         vm.stopPrank();
         return tokenId;
     }
@@ -38,12 +38,12 @@ contract PositionTest is Base {
         address asset = address(assets[0]);
         uint256 tokenId = test_borrow();
         vm.startPrank(user1);
-        IERC20(asset).approve(address(position), 1 ether);
-        position.repay(tokenId, address(vaultOf(asset)), 1 ether);
+        IERC20(asset).approve(address(multiAssetPosition), 1 ether);
+        multiAssetPosition.repay(tokenId, address(vaultOf(asset)), 1 ether);
         vm.stopPrank();
     }
 
-    function test_position() public {
+    function test_multiAssetPosition() public {
         vm.startPrank(user1); // LP
         for (uint256 i = 0; i < assets.length; i++) {
             deal(address(assets[i]), user1, 100 ether);
@@ -56,20 +56,20 @@ contract PositionTest is Base {
         deal(address(assets[1]), user2, 10 ether);
 
         vm.startPrank(user2);
-        uint256 tokenId = position.mint(user2);
+        uint256 tokenId = multiAssetPosition.mint(user2);
         assets[0].approve(address(vaults[0]), 10 ether);
         assets[1].approve(address(vaults[1]), 10 ether);
         vaults[0].deposit(10 ether, user2);
         vaults[1].deposit(10 ether, user2);
-        vaults[0].transfer(address(position), 10 ether);
-        vaults[1].transfer(address(position), 10 ether);
-        position.supply(tokenId, address(vaults[0]));
-        position.supply(tokenId, address(vaults[1]));
-        position.borrow(tokenId, address(vaults[2]), 10 ether);
-        position.borrow(tokenId, address(vaults[3]), 10 ether);
+        vaults[0].transfer(address(multiAssetPosition), 10 ether);
+        vaults[1].transfer(address(multiAssetPosition), 10 ether);
+        multiAssetPosition.supply(tokenId, address(vaults[0]));
+        multiAssetPosition.supply(tokenId, address(vaults[1]));
+        multiAssetPosition.borrow(tokenId, address(vaults[2]), 10 ether);
+        multiAssetPosition.borrow(tokenId, address(vaults[3]), 10 ether);
         vm.stopPrank();
 
-        (address[] memory vaults, int[] memory amounts) = position.getPosition(
+        (address[] memory vaults, int[] memory amounts) = multiAssetPosition.getPosition(
             tokenId
         );
         assertEq(vaults.length, 4);

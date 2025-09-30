@@ -5,10 +5,19 @@ import {Test, console} from "forge-std/Test.sol";
 import {Vault} from "../src/core/Vault.sol";
 import {InterestRate} from "../src/constants/InterestRate.sol";
 import {Setup} from "./Setup.t.sol";
-import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {ERC20Customized} from "./Setup.t.sol";
 
 contract Base is Setup {
+    function test_ownership() public {
+        assertEq(config.owner(), deployer);
+        assertEq(config.pendingOwner(), address(0));
+        assertEq(multiAssetPosition.owner(), deployer);
+        for (uint256 i = 0; i < vaults.length; i++) {
+            assertEq(vaults[i].owner(), deployer);
+        }
+    }
+
     function _test_deposit(
         address _user,
         address _asset,
