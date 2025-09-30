@@ -2,16 +2,16 @@
 pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
-import {Vault} from "../src/Vault.sol";
+import {Vault} from "../src/core/Vault.sol";
 import {ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {TransparentUpgradeableProxy} from "lib/openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {InterestRate} from "../src/constants/InterestRate.sol";
 import {TestUtils} from "./TestUtils.sol";
 import {ProxyAdmin} from "lib/openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
-import {Config} from "../src/Config.sol";
-import {Position} from "../src/Position.sol";
+import {Config} from "../src/core/Config.sol";
+import {Position} from "../src/position/Position.sol";
 import {Strings} from "lib/openzeppelin-contracts/contracts/utils/Strings.sol";
-import {Oracle} from "../src/Oracle.sol";
+import {Oracle} from "../src/oracle/Oracle.sol";
 
 contract ERC20Customized is ERC20 {
     constructor(

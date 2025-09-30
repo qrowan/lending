@@ -5,8 +5,8 @@ import {ReentrancyGuardUpgradeable} from "lib/openzeppelin-contracts-upgradeable
 import {ERC721Upgradeable} from "lib/openzeppelin-contracts-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
 import {EnumerableSet} from "lib/openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 import {SignedMath} from "lib/openzeppelin-contracts/contracts/utils/math/SignedMath.sol";
-import {IVault} from "./Vault.sol";
-import {IConfig} from "./Config.sol";
+import {IVault} from "../core/Vault.sol";
+import {IConfig} from "../core/Config.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 contract Position is

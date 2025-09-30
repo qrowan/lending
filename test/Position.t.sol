@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
-import {Vault} from "../src/Vault.sol";
+import {Vault} from "../src/core/Vault.sol";
 import {ERC20Mock} from "lib/openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
 import {InterestRate} from "../src/constants/InterestRate.sol";
 import {Base} from "./Base.t.sol";

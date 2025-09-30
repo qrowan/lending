@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {Script, console} from "forge-std/Script.sol";
-import {Vault} from "../src/Vault.sol";
+import {Vault} from "../src/core/Vault.sol";
 
 contract VaultScript is Script {
     Vault public vault;

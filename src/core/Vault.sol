@@ -5,7 +5,7 @@ import {ReentrancyGuardUpgradeable} from "lib/openzeppelin-contracts-upgradeable
 import {ERC4626Upgradeable} from "lib/openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol";
 import {IERC20Metadata} from "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {InterestRate} from "./constants/InterestRate.sol";
+import {InterestRate} from "../constants/InterestRate.sol";
 import {IConfig} from "./Config.sol";
 import {SafeERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
