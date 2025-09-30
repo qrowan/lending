@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 import {Ownable2StepUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/access/Ownable2StepUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
 import {ERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
 import {EnumerableSet} from "openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 import {SignedMath} from "openzeppelin-contracts/contracts/utils/math/SignedMath.sol";
@@ -8,7 +9,11 @@ import {IVault} from "./Vault.sol";
 import {IConfig} from "./Config.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
-contract Position is ERC721Upgradeable, Ownable2StepUpgradeable {
+contract Position is
+    ERC721Upgradeable,
+    Ownable2StepUpgradeable,
+    ReentrancyGuardUpgradeable
+{
     using SignedMath for int256;
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
@@ -74,10 +79,11 @@ contract Position is ERC721Upgradeable, Ownable2StepUpgradeable {
     function initialize(address _config) external initializer {
         __ERC721_init("Position", "POSITION");
         __Ownable_init(msg.sender);
+        __ReentrancyGuard_init();
         config = _config;
     }
 
-    function mint(address _to) external returns (uint256) {
+    function mint(address _to) external nonReentrant returns (uint256) {
         uint256 tokenId = _tokenIdCounter++;
         _mint(_to, tokenId);
         return tokenId;
@@ -88,6 +94,7 @@ contract Position is ERC721Upgradeable, Ownable2StepUpgradeable {
         address _vToken
     )
         external
+        nonReentrant
         onlyVault(_vToken)
         balanceCheck(_tokenId, _vToken, BalanceType.NO_DEBT)
     {
@@ -106,11 +113,12 @@ contract Position is ERC721Upgradeable, Ownable2StepUpgradeable {
         uint256 _amount
     )
         external
+        nonReentrant
         onlyVault(_vToken)
         onlyOwnerOf(_tokenId)
         balanceCheck(_tokenId, _vToken, BalanceType.CREDIT)
     {
-        claim(_vToken);
+        _claim(_vToken);
         require(_amount > 0, "Amount must be greater than 0");
         _updateBalance(_tokenId, _vToken, int256(_amount) * -1);
         _updateReserve(_vToken, int256(_amount) * -1);
@@ -123,11 +131,12 @@ contract Position is ERC721Upgradeable, Ownable2StepUpgradeable {
         uint256 _amount
     )
         external
+        nonReentrant
         onlyVault(_vToken)
         onlyOwnerOf(_tokenId)
         balanceCheck(_tokenId, _vToken, BalanceType.NO_CREDIT)
     {
-        claim(_vToken);
+        _claim(_vToken);
         require(_amount > 0, "Amount must be greater than 0");
         _addAsset(_tokenId, _vToken);
         _updateBalance(_tokenId, _vToken, int256(_amount) * -1);
@@ -140,6 +149,7 @@ contract Position is ERC721Upgradeable, Ownable2StepUpgradeable {
         uint256 _amount
     )
         external
+        nonReentrant
         onlyVault(_vToken)
         onlyOwnerOf(_tokenId)
         balanceCheck(_tokenId, _vToken, BalanceType.DEBT)
@@ -171,7 +181,11 @@ contract Position is ERC721Upgradeable, Ownable2StepUpgradeable {
         reserves[_vToken] = uint256(int256(reserves[_vToken]) + _amount);
     }
 
-    function claim(address _vToken) public {
+    function claim(address _vToken) public nonReentrant {
+        _claim(_vToken);
+    }
+
+    function _claim(address _vToken) private {
         uint256 diff = IERC20(_vToken).balanceOf(address(this)) -
             reserves[_vToken];
         IERC20(_vToken).safeTransfer(msg.sender, diff);

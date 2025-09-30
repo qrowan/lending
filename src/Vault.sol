@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 import {Ownable2StepUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/access/Ownable2StepUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
 import {ERC4626Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol";
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
@@ -14,7 +15,11 @@ interface IVault {
     function asset() external view returns (address);
 }
 
-contract Vault is ERC4626Upgradeable, Ownable2StepUpgradeable {
+contract Vault is
+    ERC4626Upgradeable,
+    Ownable2StepUpgradeable,
+    ReentrancyGuardUpgradeable
+{
     using SafeERC20 for IERC20;
     uint constant NUMBER_OF_DEAD_SHARES = 1000;
     address constant DEAD_ADDRESS =
@@ -35,6 +40,7 @@ contract Vault is ERC4626Upgradeable, Ownable2StepUpgradeable {
             string.concat("VAULT ", IERC20Metadata(_asset).symbol())
         );
         __Ownable_init(msg.sender);
+        __ReentrancyGuard_init();
         config = _config;
     }
 
@@ -60,7 +66,7 @@ contract Vault is ERC4626Upgradeable, Ownable2StepUpgradeable {
             );
     }
 
-    function updateLentAmount(uint256 _amount, bool _add) private {
+    function _updateLentAmount(uint256 _amount, bool _add) private {
         lentAmountStored = _add
             ? lentAmountStored + _amount
             : lentAmountStored - _amount;
@@ -70,13 +76,19 @@ contract Vault is ERC4626Upgradeable, Ownable2StepUpgradeable {
     function borrow(
         uint256 _borrowAmount,
         address _receiver
-    ) public onlyPosition(msg.sender) {
+    ) public nonReentrant onlyPosition(msg.sender) {
         IERC20(asset()).safeTransfer(_receiver, _borrowAmount);
-        updateLentAmount(_borrowAmount, true);
+        _updateLentAmount(_borrowAmount, true);
     }
 
-    function repay(uint256 _repayAmount) public onlyPosition(msg.sender) {
-        IERC20(asset()).safeTransferFrom(msg.sender, address(this), _repayAmount);
-        updateLentAmount(_repayAmount, false);
+    function repay(
+        uint256 _repayAmount
+    ) public nonReentrant onlyPosition(msg.sender) {
+        IERC20(asset()).safeTransferFrom(
+            msg.sender,
+            address(this),
+            _repayAmount
+        );
+        _updateLentAmount(_repayAmount, false);
     }
 }
