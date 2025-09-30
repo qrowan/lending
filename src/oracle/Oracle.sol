@@ -1,23 +1,27 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
-import {Ownable2StepUpgradeable} from "lib/openzeppelin-contracts-upgradeable/contracts/access/Ownable2StepUpgradeable.sol";
-import {PausableUpgradeable} from "lib/openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol";
+import {Ownable2Step} from "lib/openzeppelin-contracts/contracts/access/Ownable2Step.sol";
+import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import {Pausable} from "lib/openzeppelin-contracts/contracts/utils/Pausable.sol";
+
 import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 
-contract Oracle is Ownable2StepUpgradeable, PausableUpgradeable {
+struct PriceMessage {
+    address asset;
+    uint256 price;
+    uint256 chainId;
+    uint256 timestamp;
+    bytes signature;
+}
+contract Oracle is Ownable2Step, Pausable {
     using ECDSA for bytes32;
     mapping(address => ReferenceData) public referenceData;
     mapping(address => bool) public isKeeper;
     uint public constant PRECISION = 1e18;
     uint public requiredSignatures;
+    uint public priceDuration = 10 seconds;
 
-    constructor() {
-        _disableInitializers();
-    }
-
-    function initialize(uint _requiredSignatures) external initializer {
-        __Ownable_init(msg.sender);
-        __Pausable_init();
+    constructor(uint _requiredSignatures) Ownable(msg.sender) {
         requiredSignatures = _requiredSignatures;
     }
 
@@ -43,7 +47,9 @@ contract Oracle is Ownable2StepUpgradeable, PausableUpgradeable {
         referenceData[_asset].heartbeat = _heartbeat;
     }
 
-    function priceOf(address _asset) external whenNotPaused view returns (uint256) {
+    function priceOf(
+        address _asset
+    ) external view whenNotPaused returns (uint256) {
         require(
             block.timestamp - referenceData[_asset].timestamp <=
                 referenceData[_asset].heartbeat,
@@ -54,32 +60,88 @@ contract Oracle is Ownable2StepUpgradeable, PausableUpgradeable {
 
     function updatePrice(
         address _asset,
-        uint256 _price,
-        bytes[] memory _signatures
+        PriceMessage[] memory _priceMessages
     ) external whenNotPaused onlyKeeper {
         require(
-            _signatures.length >= requiredSignatures,
+            _priceMessages.length >= requiredSignatures,
             "Oracle: not enough signatures"
         );
-        bytes32 message = keccak256(abi.encodePacked(address(_asset), _price));
-        validateSignatures(message, _signatures);
-        referenceData[_asset].lastData = _price;
+        address[] memory seenSigners = new address[](_priceMessages.length);
+        uint[] memory priceOpinions = new uint[](_priceMessages.length);
+        for (uint i = 0; i < _priceMessages.length; i++) {
+            seenSigners[i] = validateSignatures(_asset, _priceMessages[i]);
+            priceOpinions[i] = _priceMessages[i].price;
+        }
+        validateSigners(seenSigners);
+        uint medianPrice = median(priceOpinions);
+        referenceData[_asset].lastData = medianPrice;
         referenceData[_asset].timestamp = block.timestamp;
     }
 
     function validateSignatures(
-        bytes32 message,
-        bytes[] memory signatures
-    ) internal view {
-        address[] memory seenSigners = new address[](signatures.length);
+        address _asset,
+        PriceMessage memory _priceMessages
+    ) internal view returns (address) {
+        bytes32 message = keccak256(
+            abi.encodePacked(
+                address(_priceMessages.asset),
+                _priceMessages.price,
+                _priceMessages.chainId,
+                _priceMessages.timestamp
+            )
+        );
+        bytes memory signature = _priceMessages.signature;
+        address signer = ECDSA.recover(message, signature);
+        require(isKeeper[signer], "Oracle: invalid signer");
+        require(
+            block.chainid == _priceMessages.chainId,
+            "Oracle: invalid chain id"
+        );
+        require(_priceMessages.asset == _asset, "Oracle: wrong asset");
+        require(
+            block.timestamp - _priceMessages.timestamp <= priceDuration,
+            "Oracle: invalid timestamp"
+        );
+        return signer;
+    }
 
-        for (uint i = 0; i < signatures.length; i++) {
-            address signer = ECDSA.recover(message, signatures[i]);
-            require(isKeeper[signer], "Oracle: invalid signer");
-            for (uint j = 0; j < i; j++) {
-                require(seenSigners[j] != signer, "Oracle: duplicate signer");
+    function validateSigners(address[] memory _seenSigners) internal view {
+        // no duplicates
+        for (uint i = 0; i < _seenSigners.length; i++) {
+            for (uint j = i + 1; j < _seenSigners.length; j++) {
+                require(
+                    _seenSigners[i] != _seenSigners[j],
+                    "Oracle: duplicate signer"
+                );
             }
-            seenSigners[i] = signer;
+        }
+    }
+
+    function median(uint[] memory _priceOpinions) internal pure returns (uint) {
+        uint[] memory sortedPrices = new uint[](_priceOpinions.length);
+        for (uint i = 0; i < _priceOpinions.length; i++) {
+            sortedPrices[i] = _priceOpinions[i];
+        }
+
+        // Sort the array
+        for (uint i = 0; i < sortedPrices.length - 1; i++) {
+            for (uint j = 0; j < sortedPrices.length - i - 1; j++) {
+                if (sortedPrices[j] > sortedPrices[j + 1]) {
+                    uint temp = sortedPrices[j];
+                    sortedPrices[j] = sortedPrices[j + 1];
+                    sortedPrices[j + 1] = temp;
+                }
+            }
+        }
+
+        uint length = sortedPrices.length;
+        if (length % 2 == 0) {
+            // Even number of elements: average of middle two
+            return
+                (sortedPrices[length / 2 - 1] + sortedPrices[length / 2]) / 2;
+        } else {
+            // Odd number of elements: middle element
+            return sortedPrices[length / 2];
         }
     }
 

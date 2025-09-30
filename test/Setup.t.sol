@@ -45,33 +45,28 @@ contract Setup is TestUtils {
     address public keeper1;
     address public keeper2;
     address public keeper3;
+    address public keeper4;
     uint256 public keeper1Key;
     uint256 public keeper2Key;
     uint256 public keeper3Key;
+    uint256 public keeper4Key;
 
     function setUp() public {
         (deployer, ) = makeAddrAndKey("deployer");
         (keeper1, keeper1Key) = makeAddrAndKey("keeper1");
         (keeper2, keeper2Key) = makeAddrAndKey("keeper2");
         (keeper3, keeper3Key) = makeAddrAndKey("keeper3");
+        (keeper4, keeper4Key) = makeAddrAndKey("keeper4");
         vm.startPrank(deployer);
         ProxyAdmin proxyAdmin = new ProxyAdmin(deployer);
         console.log("proxyAdmin", address(proxyAdmin));
         vm.label(address(proxyAdmin), "PROXY_ADMIN");
         config = new Config();
         multiAssetPosition = new MultiAssetPosition(address(config));
-        Oracle _oracle = new Oracle();
+        oracle = new Oracle(3);
 
         vm.label(address(multiAssetPosition), "POSITION");
         vm.label(address(config), "CONFIG");
-
-        oracle = Oracle(
-            _makeProxy(
-                proxyAdmin,
-                address(_oracle),
-                abi.encodeWithSelector(Oracle.initialize.selector, 3)
-            )
-        );
         vm.label(address(oracle), "ORACLE");
 
         for (uint i = 0; i < 5; i++) {

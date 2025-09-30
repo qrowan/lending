@@ -6,15 +6,18 @@ import {ERC20Mock} from "openzeppelin-contracts/contracts/mocks/token/ERC20Mock.
 import {InterestRate} from "../src/constants/InterestRate.sol";
 import {Base} from "./Base.t.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {PriceMessage} from "../src/oracle/Oracle.sol";
 contract OracleTest is Base {
     function test_setKeeper() public {
         vm.startPrank(deployer);
         oracle.setKeeper(keeper1, true);
         oracle.setKeeper(keeper2, true);
         oracle.setKeeper(keeper3, true);
+        oracle.setKeeper(keeper4, true);
         assertEq(oracle.isKeeper(keeper1), true);
         assertEq(oracle.isKeeper(keeper2), true);
         assertEq(oracle.isKeeper(keeper3), true);
+        assertEq(oracle.isKeeper(keeper4), true);
         vm.stopPrank();
     }
 
@@ -31,30 +34,16 @@ contract OracleTest is Base {
     function test_updatePrice() public {
         test_setKeeper();
         test_setHeartbeat();
-        bytes[] memory signatures = new bytes[](3);
-        signatures[0] = signToPrice(
-            address(assets[0]),
-            (1e18 * 80000) / 1e8,
-            keeper1Key
-        );
-        signatures[1] = signToPrice(
-            address(assets[0]),
-            (1e18 * 80000) / 1e8,
-            keeper2Key
-        );
-        signatures[2] = signToPrice(
-            address(assets[0]),
-            (1e18 * 80000) / 1e8,
-            keeper3Key
-        );
+        uint256 price = (1e18 * 80000) / 1e8;
+
+        PriceMessage[] memory pMsg = new PriceMessage[](3);
+        pMsg[0] = getPMsg(address(assets[0]), price, keeper1Key);
+        pMsg[1] = getPMsg(address(assets[0]), price, keeper2Key);
+        pMsg[2] = getPMsg(address(assets[0]), price, keeper3Key);
 
         vm.startPrank(keeper1);
-        oracle.updatePrice(
-            address(assets[0]),
-            (1e18 * 80000) / 1e8,
-            signatures
-        );
-        assertEq(oracle.priceOf(address(assets[0])), (1e18 * 80000) / 1e8);
+        oracle.updatePrice(address(assets[0]), pMsg);
+        assertEq(oracle.priceOf(address(assets[0])), price);
         vm.stopPrank();
     }
 
@@ -66,14 +55,63 @@ contract OracleTest is Base {
         oracle.priceOf(address(assets[0]));
     }
 
-    function signToPrice(
+    function test_medianPriceEven() public {
+        test_setKeeper();
+        test_setHeartbeat();
+
+        // Test with 4 different prices (even number)
+        PriceMessage[] memory pMsg = new PriceMessage[](4);
+        pMsg[0] = getPMsg(address(assets[0]), 100e18, keeper1Key);
+        pMsg[1] = getPMsg(address(assets[0]), 200e18, keeper2Key);
+        pMsg[2] = getPMsg(address(assets[0]), 300e18, keeper3Key);
+        pMsg[3] = getPMsg(address(assets[0]), 400e18, keeper4Key);
+
+        vm.startPrank(keeper1);
+        oracle.updatePrice(address(assets[0]), pMsg);
+        // Median of [100, 200, 300, 400] should be (200 + 300) / 2 = 250
+        assertEq(oracle.priceOf(address(assets[0])), 250e18);
+        vm.stopPrank();
+    }
+
+    function test_medianPriceOdd() public {
+        test_setKeeper();
+        test_setHeartbeat();
+
+        // Test with 3 different prices (odd number)
+        PriceMessage[] memory pMsg = new PriceMessage[](3);
+        pMsg[0] = getPMsg(address(assets[0]), 100e18, keeper1Key);
+        pMsg[1] = getPMsg(address(assets[0]), 300e18, keeper2Key);
+        pMsg[2] = getPMsg(address(assets[0]), 200e18, keeper3Key);
+
+        vm.startPrank(keeper1);
+        oracle.updatePrice(address(assets[0]), pMsg);
+        // Median of [100, 200, 300] should be 200
+        assertEq(oracle.priceOf(address(assets[0])), 200e18);
+        vm.stopPrank();
+    }
+
+    function getPMsg(
         address asset,
         uint256 price,
         uint256 privateKey
-    ) public pure returns (bytes memory) {
-        bytes32 digest = keccak256(abi.encodePacked(asset, price));
+    ) public returns (PriceMessage memory) {
+        uint256 timestamp = block.timestamp;
+        uint256 chainId = block.chainid;
+
+        bytes32 digest = keccak256(
+            abi.encodePacked(asset, price, chainId, timestamp)
+        );
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
-        return createSignature(v, r, s);
+        bytes memory signature = createSignature(v, r, s);
+
+        return
+            PriceMessage({
+                asset: asset,
+                price: price,
+                chainId: chainId,
+                timestamp: timestamp,
+                signature: signature
+            });
     }
 
     function createSignature(
