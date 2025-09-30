@@ -11,7 +11,8 @@ import {ProxyAdmin} from "lib/openzeppelin-contracts/contracts/proxy/transparent
 import {Config} from "../src/core/Config.sol";
 import {MultiAssetPosition} from "../src/position/MultiAssetPosition.sol";
 import {Strings} from "lib/openzeppelin-contracts/contracts/utils/Strings.sol";
-import {Oracle} from "../src/oracle/Oracle.sol";
+import {Oracle, PriceMessage} from "../src/oracle/Oracle.sol";
+import {Liquidator} from "../src/core/Liquidator.sol";
 
 contract ERC20Customized is ERC20 {
     constructor(
@@ -38,6 +39,7 @@ contract Setup is TestUtils {
     Vault[] public vaults;
     ERC20Customized[] public assets;
     Oracle public oracle;
+    Liquidator public liquidator;
     address public user;
     address public user1;
     address public user2;
@@ -62,8 +64,14 @@ contract Setup is TestUtils {
         console.log("proxyAdmin", address(proxyAdmin));
         vm.label(address(proxyAdmin), "PROXY_ADMIN");
         config = new Config();
-        multiAssetPosition = new MultiAssetPosition(address(config));
+        liquidator = new Liquidator(address(config));
+        config.setLiquidator(address(liquidator));
+
         oracle = new Oracle(3);
+        multiAssetPosition = new MultiAssetPosition(
+            address(config),
+            address(oracle)
+        );
 
         vm.label(address(multiAssetPosition), "POSITION");
         vm.label(address(config), "CONFIG");
@@ -99,5 +107,102 @@ contract Setup is TestUtils {
         (user1, ) = makeAddrAndKey("user1");
         (user2, ) = makeAddrAndKey("user2");
         vm.stopPrank();
+
+        _setKeepers();
+        _setHeartbeats();
+        _updatePrices();
+        _makeMarket();
+    }
+
+    function _setKeepers() internal {
+        vm.startPrank(deployer);
+        oracle.setKeeper(keeper1, true);
+        oracle.setKeeper(keeper2, true);
+        oracle.setKeeper(keeper3, true);
+        oracle.setKeeper(keeper4, true);
+        assertEq(oracle.isKeeper(keeper1), true);
+        assertEq(oracle.isKeeper(keeper2), true);
+        assertEq(oracle.isKeeper(keeper3), true);
+        assertEq(oracle.isKeeper(keeper4), true);
+        vm.stopPrank();
+    }
+
+    function _setHeartbeats() internal {
+        vm.startPrank(deployer);
+        oracle.setHeartbeat(address(assets[0]), 30);
+        oracle.setHeartbeat(address(assets[1]), 30);
+        oracle.setHeartbeat(address(assets[2]), 30);
+        oracle.setHeartbeat(address(assets[3]), 30);
+        vm.stopPrank();
+    }
+
+    function _makeMarket() internal {
+        deal(address(assets[0]), deployer, 100 ether);
+        deal(address(assets[1]), deployer, 100 ether);
+        deal(address(assets[2]), deployer, 100 ether);
+        deal(address(assets[3]), deployer, 100 ether);
+        vm.startPrank(deployer);
+        for (uint i = 0; i < 4; i++) {
+            assets[i].approve(address(vaults[i]), 100 ether);
+            vaults[i].deposit(100 ether, deployer);
+        }
+        vm.stopPrank();
+    }
+
+    function _updatePrices() internal {
+        _updatePrice(address(assets[0]), (1e18 * 80000) / 1e8);
+        _updatePrice(address(assets[1]), (1e18 * 80000) / 1e8);
+        _updatePrice(address(assets[2]), (1e18 * 80000) / 1e8);
+        _updatePrice(address(assets[3]), (1e18 * 80000) / 1e8);
+    }
+
+    function _updatePrice(address _asset, uint256 _price) internal {
+        // Test with 3 different prices (odd number)
+        PriceMessage[] memory pMsg = new PriceMessage[](3);
+        pMsg[0] = getPMsg(address(_asset), _price, keeper1Key);
+        pMsg[1] = getPMsg(address(_asset), _price, keeper2Key);
+        pMsg[2] = getPMsg(address(_asset), _price, keeper3Key);
+
+        vm.startPrank(keeper1);
+        oracle.updatePrice(_asset, pMsg);
+        vm.stopPrank();
+    }
+
+    function getPMsg(
+        address asset,
+        uint256 price,
+        uint256 privateKey
+    ) public view returns (PriceMessage memory) {
+        uint256 timestamp = block.timestamp;
+        uint256 chainId = block.chainid;
+
+        bytes32 digest = keccak256(
+            abi.encodePacked(asset, price, chainId, timestamp)
+        );
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
+        bytes memory signature = createSignature(v, r, s);
+
+        return
+            PriceMessage({
+                asset: asset,
+                price: price,
+                chainId: chainId,
+                timestamp: timestamp,
+                signature: signature
+            });
+    }
+
+    function createSignature(
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) public pure returns (bytes memory) {
+        bytes memory signature = new bytes(65);
+        assembly {
+            mstore(add(signature, 32), r)
+            mstore(add(signature, 64), s)
+            mstore8(add(signature, 96), v)
+        }
+        return signature;
     }
 }

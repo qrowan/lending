@@ -9,7 +9,7 @@ import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.so
 import {ERC20Customized} from "./Setup.t.sol";
 
 contract Base is Setup {
-    function test_ownership() public {
+    function test_ownership() public view {
         assertEq(config.owner(), deployer);
         assertEq(config.pendingOwner(), address(0));
         assertEq(multiAssetPosition.owner(), deployer);

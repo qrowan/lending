@@ -13,33 +13,36 @@ contract PositionTest is Base {
         console.log("symbol", multiAssetPosition.symbol());
     }
 
-    function test_supply() public {
+    function test_supply() public returns (uint256) {
         address asset = address(assets[0]);
         uint256 amount = 1 ether;
-        _test_deposit(user, asset, amount);
-        vm.startPrank(user);
-        uint256 tokenId = multiAssetPosition.mint(user);
-        IERC20(address(vaultOf(asset))).transfer(address(multiAssetPosition), amount);
+        _test_deposit(user1, asset, amount);
+        vm.startPrank(user1);
+        uint256 tokenId = multiAssetPosition.mint(user1);
+        IERC20(address(vaultOf(asset))).transfer(
+            address(multiAssetPosition),
+            amount
+        );
         multiAssetPosition.supply(tokenId, address(vaultOf(asset)));
         vm.stopPrank();
+        return tokenId;
     }
 
     function test_borrow() public returns (uint256) {
-        address asset = address(assets[0]);
-        test_supply();
+        address asset = address(assets[1]);
+        uint256 tokenId = test_supply();
         vm.startPrank(user1);
-        uint256 tokenId = multiAssetPosition.mint(user1);
-        multiAssetPosition.borrow(tokenId, address(vaultOf(asset)), 1 ether);
+        multiAssetPosition.borrow(tokenId, address(vaultOf(asset)), 0.1 ether);
         vm.stopPrank();
         return tokenId;
     }
 
     function test_repay() public {
-        address asset = address(assets[0]);
+        address asset = address(assets[1]);
         uint256 tokenId = test_borrow();
         vm.startPrank(user1);
-        IERC20(asset).approve(address(multiAssetPosition), 1 ether);
-        multiAssetPosition.repay(tokenId, address(vaultOf(asset)), 1 ether);
+        IERC20(asset).approve(address(multiAssetPosition), 0.1 ether);
+        multiAssetPosition.repay(tokenId, address(vaultOf(asset)), 0.1 ether);
         vm.stopPrank();
     }
 
@@ -65,13 +68,12 @@ contract PositionTest is Base {
         vaults[1].transfer(address(multiAssetPosition), 10 ether);
         multiAssetPosition.supply(tokenId, address(vaults[0]));
         multiAssetPosition.supply(tokenId, address(vaults[1]));
-        multiAssetPosition.borrow(tokenId, address(vaults[2]), 10 ether);
-        multiAssetPosition.borrow(tokenId, address(vaults[3]), 10 ether);
+        multiAssetPosition.borrow(tokenId, address(vaults[2]), 0.1 ether);
+        multiAssetPosition.borrow(tokenId, address(vaults[3]), 0.1 ether);
         vm.stopPrank();
 
-        (address[] memory vaults, int[] memory amounts) = multiAssetPosition.getPosition(
-            tokenId
-        );
+        (address[] memory vaults, int[] memory amounts) = multiAssetPosition
+            .getPosition(tokenId);
         assertEq(vaults.length, 4);
         assertEq(amounts.length, 4);
         assertEq(vaults[0], address(vaults[0]));
@@ -80,7 +82,7 @@ contract PositionTest is Base {
         assertEq(vaults[3], address(vaults[3]));
         assertEq(amounts[0], 10 ether);
         assertEq(amounts[1], 10 ether);
-        assertEq(amounts[2], -10 ether);
-        assertEq(amounts[3], -10 ether);
+        assertEq(amounts[2], -0.1 ether);
+        assertEq(amounts[3], -0.1 ether);
     }
 }

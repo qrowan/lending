@@ -2,6 +2,6 @@
 pragma solidity ^0.8.13;
 
 interface IPosition {
-    function heath() external view returns (uint256);
-    function liquidate() external;
+    function isLiquidatable(uint256 _tokenId) external view returns (bool);
+    function liquidate(uint256 _tokenId, bytes memory _data) external;
 }

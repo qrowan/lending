@@ -12,6 +12,27 @@ import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.so
 import {SafeERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IPosition} from "./IPosition.sol";
 
+interface IOracle {
+    function priceOf(address _asset) external view returns (uint256);
+}
+
+struct RepayData {
+    address vToken;
+    uint256 amount;
+}
+
+struct RewardData {
+    address vToken;
+    uint256 amount;
+}
+
+struct LiquidateData {
+    RepayData[] repayData;
+    RewardData[] rewardData;
+    address payer;
+    address receiver;
+}
+
 contract MultiAssetPosition is
     IPosition,
     ERC721,
@@ -23,11 +44,17 @@ contract MultiAssetPosition is
     using SafeERC20 for IERC20;
     uint private _tokenIdCounter;
     address public config;
-
+    address public oracle;
+    uint public constant INITIALIZATION_THRESHOLD = 20000;
+    uint public constant LIQUIDATION_THRESHOLD = 15000;
+    address public liquidator;
     constructor(
-        address _config
+        address _config,
+        address _oracle
     ) Ownable(msg.sender) ERC721("Position", "POSITION") {
         config = _config;
+        oracle = _oracle;
+        liquidator = IConfig(config).getLiquidator();
     }
 
     error HasDebt();
@@ -54,6 +81,14 @@ contract MultiAssetPosition is
         require(
             IConfig(config).isVault(_vToken),
             "Only vault can call this function"
+        );
+        _;
+    }
+
+    modifier onlyLiquidator() {
+        require(
+            msg.sender == IConfig(config).getLiquidator(),
+            "Only liquidator can call this function"
         );
         _;
     }
@@ -111,11 +146,17 @@ contract MultiAssetPosition is
         uint256 _tokenId,
         address _vToken,
         uint256 _amount
+    ) external nonReentrant onlyOwnerOf(_tokenId) {
+        _withdraw(_tokenId, _vToken, _amount);
+    }
+
+    function _withdraw(
+        uint256 _tokenId,
+        address _vToken,
+        uint256 _amount
     )
-        external
-        nonReentrant
+        private
         onlyVault(_vToken)
-        onlyOwnerOf(_tokenId)
         balanceCheck(_tokenId, _vToken, BalanceType.CREDIT)
     {
         _claim(_vToken);
@@ -123,6 +164,8 @@ contract MultiAssetPosition is
         _updateBalance(_tokenId, _vToken, int256(_amount) * -1);
         _updateReserve(_vToken, int256(_amount) * -1);
         IERC20(_vToken).safeTransfer(msg.sender, _amount);
+
+        require(isInitializable(_tokenId), "Position is not initializable");
     }
 
     function borrow(
@@ -141,23 +184,33 @@ contract MultiAssetPosition is
         _addAsset(_tokenId, _vToken);
         _updateBalance(_tokenId, _vToken, int256(_amount) * -1);
         IVault(_vToken).borrow(_amount, msg.sender);
+
+        require(isInitializable(_tokenId), "Position is not initializable");
     }
 
     function repay(
         uint256 _tokenId,
         address _vToken,
         uint256 _amount
+    ) external nonReentrant onlyOwnerOf(_tokenId) {
+        require(_amount > 0, "Amount must be greater than 0");
+        _claim(_vToken);
+        _repay(_tokenId, _vToken, _amount, msg.sender);
+    }
+
+    function _repay(
+        uint256 _tokenId,
+        address _vToken,
+        uint256 _amount,
+        address _payer
     )
-        external
-        nonReentrant
+        private
         onlyVault(_vToken)
-        onlyOwnerOf(_tokenId)
         balanceCheck(_tokenId, _vToken, BalanceType.DEBT)
     {
-        require(_amount > 0, "Amount must be greater than 0");
         _updateBalance(_tokenId, _vToken, int256(_amount));
         address asset = IVault(_vToken).asset();
-        IERC20(asset).safeTransferFrom(msg.sender, address(this), _amount);
+        IERC20(asset).safeTransferFrom(_payer, address(this), _amount);
         IERC20(asset).approve(address(IVault(_vToken)), _amount);
         IVault(_vToken).repay(_amount);
     }
@@ -210,13 +263,72 @@ contract MultiAssetPosition is
         return (_vTokens, _balances);
     }
 
-    function heath() external view returns (uint256) {
-        // TODO: implement
-        return 0;
+    function health(
+        uint256 _tokenId
+    ) public view returns (uint256 collateral, uint256 debt) {
+        address[] memory _vTokens = positions[_tokenId].vaults.values();
+        for (uint256 i = 0; i < _vTokens.length; i++) {
+            uint absBalance = balances[_tokenId][_vTokens[i]].abs();
+            address asset = IVault(_vTokens[i]).asset();
+            collateral += absBalance * IOracle(oracle).priceOf(asset);
+            if (balances[_tokenId][_vTokens[i]] < 0) {
+                debt += absBalance * IOracle(oracle).priceOf(asset);
+            }
+        }
+        return (collateral, debt);
     }
 
-    function liquidate() external {
-        // TODO: implement
+    function isInitializable(uint256 _tokenId) public view returns (bool) {
+        (uint256 collateral, uint256 debt) = health(_tokenId);
+        return collateral > (debt * INITIALIZATION_THRESHOLD) / 10000;
+    }
+
+    function isLiquidatable(uint256 _tokenId) public view returns (bool) {
+        (uint256 collateral, uint256 debt) = health(_tokenId);
+        return collateral < (debt * LIQUIDATION_THRESHOLD) / 10000;
+    }
+
+    function liquidate(
+        uint256 _tokenId,
+        bytes memory _data
+    ) external onlyLiquidator {
+        require(isLiquidatable(_tokenId), "Position is not liquidatable");
+        LiquidateData memory liquidateData = abi.decode(_data, (LiquidateData));
+        (uint256 collateralBefore, uint256 debtBefore) = health(_tokenId);
+
+        uint repaidValue = 0;
+        uint rewardValue = 0;
+        for (uint256 i = 0; i < liquidateData.repayData.length; i++) {
+            _repay(
+                _tokenId,
+                liquidateData.repayData[i].vToken,
+                liquidateData.repayData[i].amount,
+                liquidateData.payer
+            );
+            repaidValue +=
+                liquidateData.repayData[i].amount *
+                IOracle(oracle).priceOf(
+                    IVault(liquidateData.repayData[i].vToken).asset()
+                );
+        }
+        for (uint256 i = 0; i < liquidateData.rewardData.length; i++) {
+            _withdraw(
+                _tokenId,
+                liquidateData.rewardData[i].vToken,
+                liquidateData.rewardData[i].amount
+            );
+            rewardValue +=
+                liquidateData.rewardData[i].amount *
+                IOracle(oracle).priceOf(
+                    IVault(liquidateData.rewardData[i].vToken).asset()
+                );
+        }
+        (uint256 collateralAfter, uint256 debtAfter) = health(_tokenId);
+        require(
+            debtAfter * collateralBefore < debtBefore * collateralAfter,
+            "Health decreased"
+        );
+        require(rewardValue < repaidValue * 2, "Too much reward");
         return;
     }
 }

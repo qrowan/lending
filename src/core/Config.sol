@@ -7,18 +7,16 @@ import {EnumerableSet} from "lib/openzeppelin-contracts/contracts/utils/structs/
 interface IConfig {
     function isWhitelisted(address _position) external view returns (bool);
     function isVault(address _vault) external view returns (bool);
+    function getLiquidator() external view returns (address);
 }
 contract Config is Ownable2Step {
     using EnumerableSet for EnumerableSet.AddressSet;
     EnumerableSet.AddressSet private vaults;
+    address private liquidator;
     constructor() Ownable(msg.sender) {}
 
     function addVault(address _vault) external onlyOwner {
         vaults.add(_vault);
-    }
-
-    function removeVault(address _vault) external onlyOwner {
-        vaults.remove(_vault);
     }
 
     function getVaults() external view returns (address[] memory) {
@@ -27,5 +25,14 @@ contract Config is Ownable2Step {
 
     function isVault(address _vault) external view returns (bool) {
         return vaults.contains(_vault);
+    }
+
+    function setLiquidator(address _liquidator) external onlyOwner {
+        liquidator = _liquidator;
+    }
+
+    function getLiquidator() external view returns (address) {
+        require(liquidator != address(0), "Liquidator not set");
+        return liquidator;
     }
 }

@@ -105,7 +105,7 @@ contract Oracle is Ownable2Step, Pausable {
         return signer;
     }
 
-    function validateSigners(address[] memory _seenSigners) internal view {
+    function validateSigners(address[] memory _seenSigners) internal pure {
         // no duplicates
         for (uint i = 0; i < _seenSigners.length; i++) {
             for (uint j = i + 1; j < _seenSigners.length; j++) {

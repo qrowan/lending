@@ -2,10 +2,10 @@
 pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
-import {ERC20Mock} from "openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
+import {ERC20Mock} from "lib/openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
 import {InterestRate} from "../src/constants/InterestRate.sol";
 import {Base} from "./Base.t.sol";
-import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {PriceMessage} from "../src/oracle/Oracle.sol";
 contract OracleTest is Base {
     function test_setKeeper() public {
@@ -24,9 +24,7 @@ contract OracleTest is Base {
     function test_setHeartbeat() public {
         vm.startPrank(deployer);
         oracle.setHeartbeat(address(assets[0]), 1000);
-        (uint lastData, uint timestamp, uint heartbeat) = oracle.referenceData(
-            address(assets[0])
-        );
+        (, , uint heartbeat) = oracle.referenceData(address(assets[0]));
         assertEq(heartbeat, 1000);
         vm.stopPrank();
     }
@@ -88,43 +86,5 @@ contract OracleTest is Base {
         // Median of [100, 200, 300] should be 200
         assertEq(oracle.priceOf(address(assets[0])), 200e18);
         vm.stopPrank();
-    }
-
-    function getPMsg(
-        address asset,
-        uint256 price,
-        uint256 privateKey
-    ) public returns (PriceMessage memory) {
-        uint256 timestamp = block.timestamp;
-        uint256 chainId = block.chainid;
-
-        bytes32 digest = keccak256(
-            abi.encodePacked(asset, price, chainId, timestamp)
-        );
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
-        bytes memory signature = createSignature(v, r, s);
-
-        return
-            PriceMessage({
-                asset: asset,
-                price: price,
-                chainId: chainId,
-                timestamp: timestamp,
-                signature: signature
-            });
-    }
-
-    function createSignature(
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) public pure returns (bytes memory) {
-        bytes memory signature = new bytes(65);
-        assembly {
-            mstore(add(signature, 32), r)
-            mstore(add(signature, 64), s)
-            mstore8(add(signature, 96), v)
-        }
-        return signature;
     }
 }
