@@ -83,7 +83,6 @@ contract Setup is TestUtils {
         );
         vm.label(address(position), "POSITION");
         vm.label(address(config), "CONFIG");
-        config.setPosition(address(position));
 
         oracle = Oracle(
             _makeProxy(
@@ -127,6 +126,8 @@ contract Setup is TestUtils {
             vaults.push(Vault(_vault));
             config.addVault(address(_vault));
             console.log("vault", address(_vault));
+
+            vaults[i].setWhitelisted(address(position), true);
         }
 
         (user, ) = makeAddrAndKey("user");

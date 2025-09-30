@@ -4,12 +4,11 @@ import {Ownable2StepUpgradeable} from "openzeppelin-contracts-upgradeable/contra
 import {EnumerableSet} from "openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 
 interface IConfig {
-    function isPosition(address _position) external view returns (bool);
+    function isWhitelisted(address _position) external view returns (bool);
     function isVault(address _vault) external view returns (bool);
 }
 contract Config is Ownable2StepUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
-    address public position;
     EnumerableSet.AddressSet private vaults;
     constructor() {
         _disableInitializers();
@@ -17,10 +16,6 @@ contract Config is Ownable2StepUpgradeable {
 
     function initialize() external initializer {
         __Ownable_init(msg.sender);
-    }
-
-    function setPosition(address _position) external onlyOwner {
-        position = _position;
     }
 
     function addVault(address _vault) external onlyOwner {
@@ -37,9 +32,5 @@ contract Config is Ownable2StepUpgradeable {
 
     function isVault(address _vault) external view returns (bool) {
         return vaults.contains(_vault);
-    }
-
-    function isPosition(address _position) external view returns (bool) {
-        return _position == position;
     }
 }

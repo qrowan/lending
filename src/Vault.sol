@@ -24,10 +24,11 @@ contract Vault is
     uint constant NUMBER_OF_DEAD_SHARES = 1000;
     address constant DEAD_ADDRESS =
         address(0x000000000000000000000000000000000000dEaD);
-    uint public constant interestRatePerSecond = InterestRate.INTEREST_RATE_15;
+    uint public constant interestRatePerSecond = InterestRate.INTEREST_RATE_15; // TODO: governance ?
     uint public lentAmountStored; // TODO: private
     uint public lastUpdated; // TODO: private
     address public config;
+    mapping(address => bool) public isWhitelisted;
     constructor() {
         _disableInitializers();
     }
@@ -44,10 +45,17 @@ contract Vault is
         config = _config;
     }
 
-    modifier onlyPosition(address _position) {
+    function setWhitelisted(
+        address _contract,
+        bool _isWhitelisted
+    ) external onlyOwner {
+        isWhitelisted[_contract] = _isWhitelisted;
+    }
+
+    modifier onlyWhitelisted(address _contract) {
         require(
-            IConfig(config).isPosition(_position),
-            "Only position can call this function"
+            isWhitelisted[_contract],
+            "Only whitelisted contract can call this function"
         );
         _;
     }
@@ -76,14 +84,14 @@ contract Vault is
     function borrow(
         uint256 _borrowAmount,
         address _receiver
-    ) public nonReentrant onlyPosition(msg.sender) {
+    ) public nonReentrant onlyWhitelisted(msg.sender) {
         IERC20(asset()).safeTransfer(_receiver, _borrowAmount);
         _updateLentAmount(_borrowAmount, true);
     }
 
     function repay(
         uint256 _repayAmount
-    ) public nonReentrant onlyPosition(msg.sender) {
+    ) public nonReentrant onlyWhitelisted(msg.sender) {
         IERC20(asset()).safeTransferFrom(
             msg.sender,
             address(this),
