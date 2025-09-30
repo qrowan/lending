@@ -24,12 +24,22 @@ contract PositionTest is Base {
         vm.stopPrank();
     }
 
-    function test_borrow() public {
+    function test_borrow() public returns (uint256) {
         address asset = address(assets[0]);
         test_supply();
         vm.startPrank(user1);
         uint256 tokenId = position.mint(user1);
         position.borrow(tokenId, address(vaultOf(asset)), 1 ether);
+        vm.stopPrank();
+        return tokenId;
+    }
+
+    function test_repay() public {
+        address asset = address(assets[0]);
+        uint256 tokenId = test_borrow();
+        vm.startPrank(user1);
+        IERC20(asset).approve(address(position), 1 ether);
+        position.repay(tokenId, address(vaultOf(asset)), 1 ether);
         vm.stopPrank();
     }
 

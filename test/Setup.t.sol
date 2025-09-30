@@ -57,6 +57,7 @@ contract Setup is TestUtils {
         vm.startPrank(deployer);
         ProxyAdmin proxyAdmin = new ProxyAdmin(deployer);
         console.log("proxyAdmin", address(proxyAdmin));
+        vm.label(address(proxyAdmin), "PROXY_ADMIN");
         Config _config = new Config();
         Position _position = new Position();
         Oracle _oracle = new Oracle();
@@ -80,6 +81,8 @@ contract Setup is TestUtils {
                 )
             )
         );
+        vm.label(address(position), "POSITION");
+        vm.label(address(config), "CONFIG");
         config.setPosition(address(position));
 
         oracle = Oracle(
@@ -89,6 +92,7 @@ contract Setup is TestUtils {
                 abi.encodeWithSelector(Oracle.initialize.selector, 3)
             )
         );
+        vm.label(address(oracle), "ORACLE");
 
         Vault _logic = new Vault();
         for (uint i = 0; i < 5; i++) {

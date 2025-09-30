@@ -146,8 +146,10 @@ contract Position is ERC721Upgradeable, Ownable2StepUpgradeable {
     {
         require(_amount > 0, "Amount must be greater than 0");
         _updateBalance(_tokenId, _vToken, int256(_amount));
-        IERC20(_vToken).safeTransferFrom(msg.sender, address(this), _amount);
-        // IVault(_vToken).repay(_amount);
+        address asset = IVault(_vToken).asset();
+        IERC20(asset).safeTransferFrom(msg.sender, address(this), _amount);
+        IERC20(asset).approve(address(IVault(_vToken)), _amount);
+        IVault(_vToken).repay(_amount);
     }
 
     function _updateBalance(

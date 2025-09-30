@@ -10,6 +10,8 @@ import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/Safe
 
 interface IVault {
     function borrow(uint256 _borrowAmount, address _receiver) external;
+    function repay(uint256 _repayAmount) external;
+    function asset() external view returns (address);
 }
 
 contract Vault is ERC4626Upgradeable, Ownable2StepUpgradeable {
@@ -71,5 +73,10 @@ contract Vault is ERC4626Upgradeable, Ownable2StepUpgradeable {
     ) public onlyPosition(msg.sender) {
         IERC20(asset()).safeTransfer(_receiver, _borrowAmount);
         updateLentAmount(_borrowAmount, true);
+    }
+
+    function repay(uint256 _repayAmount) public onlyPosition(msg.sender) {
+        IERC20(asset()).safeTransferFrom(msg.sender, address(this), _repayAmount);
+        updateLentAmount(_repayAmount, false);
     }
 }
