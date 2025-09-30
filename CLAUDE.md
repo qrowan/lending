@@ -8,7 +8,7 @@ This document contains code patterns and conventions for the Rowan-Fi lending pr
 src/
 ├── Config.sol                    # Central registry for positions and vaults
 ├── Vault.sol                   # ERC4626 lending vault implementation
-├── Position.sol                # ERC721 position management with collateral/debt tracking
+├── MultiAssetPosition.sol                # ERC721 position management with collateral/debt tracking
 ├── Oracle.sol                  # Price oracle functionality
 └── constants/
     └── InterestRate.sol         # Interest rate calculations and constants

@@ -9,7 +9,7 @@ import {InterestRate} from "../src/constants/InterestRate.sol";
 import {TestUtils} from "./TestUtils.sol";
 import {ProxyAdmin} from "lib/openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
 import {Config} from "../src/core/Config.sol";
-import {Position} from "../src/position/Position.sol";
+import {MultiAssetPosition} from "../src/position/MultiAssetPosition.sol";
 import {Strings} from "lib/openzeppelin-contracts/contracts/utils/Strings.sol";
 import {Oracle} from "../src/oracle/Oracle.sol";
 
@@ -34,7 +34,7 @@ contract ERC20Customized is ERC20 {
 
 contract Setup is TestUtils {
     Config public config;
-    Position public position;
+    MultiAssetPosition public position;
     Vault[] public vaults;
     ERC20Customized[] public assets;
     Oracle public oracle;
@@ -59,7 +59,7 @@ contract Setup is TestUtils {
         console.log("proxyAdmin", address(proxyAdmin));
         vm.label(address(proxyAdmin), "PROXY_ADMIN");
         Config _config = new Config();
-        Position _position = new Position();
+        MultiAssetPosition _position = new MultiAssetPosition();
         Oracle _oracle = new Oracle();
         config = Config(
             _makeProxy(
@@ -71,12 +71,12 @@ contract Setup is TestUtils {
                 )
             )
         );
-        position = Position(
+        position = MultiAssetPosition(
             _makeProxy(
                 proxyAdmin,
                 address(_position),
                 abi.encodeWithSelector(
-                    Position.initialize.selector,
+                    MultiAssetPosition.initialize.selector,
                     address(config)
                 )
             )

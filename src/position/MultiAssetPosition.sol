@@ -9,7 +9,10 @@ import {IVault} from "../core/Vault.sol";
 import {IConfig} from "../core/Config.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
-contract Position is
+import {IPosition} from "./IPosition.sol";
+
+contract MultiAssetPosition is
+    IPosition,
     ERC721Upgradeable,
     Ownable2StepUpgradeable,
     ReentrancyGuardUpgradeable
@@ -208,5 +211,15 @@ contract Position is
             _balances[i] = balances[_tokenId][_vTokens[i]];
         }
         return (_vTokens, _balances);
+    }
+
+    function heath() external view returns (uint256) {
+        // TODO: implement
+        return 0;
+    }
+
+    function liquidate() external {
+        // TODO: implement
+        return;
     }
 }
