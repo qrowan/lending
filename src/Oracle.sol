@@ -43,7 +43,7 @@ contract Oracle is Ownable2StepUpgradeable, PausableUpgradeable {
         referenceData[_asset].heartbeat = _heartbeat;
     }
 
-    function priceOf(address _asset) external view returns (uint256) {
+    function priceOf(address _asset) external whenNotPaused view returns (uint256) {
         require(
             block.timestamp - referenceData[_asset].timestamp <=
                 referenceData[_asset].heartbeat,
@@ -56,7 +56,7 @@ contract Oracle is Ownable2StepUpgradeable, PausableUpgradeable {
         address _asset,
         uint256 _price,
         bytes[] memory _signatures
-    ) external onlyKeeper {
+    ) external whenNotPaused onlyKeeper {
         require(
             _signatures.length >= requiredSignatures,
             "Oracle: not enough signatures"
