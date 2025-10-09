@@ -101,6 +101,7 @@ contract Setup is TestUtils {
             console.log("vault", address(_vault));
 
             vaults[i].setWhitelisted(address(multiAssetPosition), true);
+            
         }
 
         (user, ) = makeAddrAndKey("user");
