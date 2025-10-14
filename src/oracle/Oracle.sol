@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 import {Ownable2Step} from "lib/openzeppelin-contracts/contracts/access/Ownable2Step.sol";
 import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import {Pausable} from "lib/openzeppelin-contracts/contracts/utils/Pausable.sol";
-
+import {EIP712} from "lib/openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
 import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {Arrays} from "lib/openzeppelin-contracts/contracts/utils/Arrays.sol";
 
@@ -14,16 +14,25 @@ struct PriceMessage {
     uint256 timestamp;
     bytes signature;
 }
-contract Oracle is Ownable2Step, Pausable {
+contract Oracle is Ownable2Step, Pausable, EIP712 {
     using ECDSA for bytes32;
     using Arrays for uint[];
+
+    // EIP-712 type hash for PriceMessage
+    bytes32 private constant PRICE_MESSAGE_TYPEHASH =
+        keccak256(
+            "PriceMessage(address asset,uint256 price,uint256 chainId,uint256 timestamp)"
+        );
+
     mapping(address => ReferenceData) public referenceData;
     mapping(address => bool) public isKeeper;
     uint public constant PRECISION = 1e18;
     uint public requiredSignatures;
     uint public priceDuration = 10 seconds;
 
-    constructor(uint _requiredSignatures) Ownable(msg.sender) {
+    constructor(
+        uint _requiredSignatures
+    ) Ownable(msg.sender) EIP712("RowanFi Oracle", "1") {
         requiredSignatures = _requiredSignatures;
     }
 
@@ -84,16 +93,23 @@ contract Oracle is Ownable2Step, Pausable {
         address _asset,
         PriceMessage memory _priceMessages
     ) internal view returns (address) {
-        bytes32 message = keccak256(
-            abi.encodePacked(
-                address(_priceMessages.asset),
+        // Create EIP-712 structured hash
+        bytes32 structHash = keccak256(
+            abi.encode(
+                PRICE_MESSAGE_TYPEHASH,
+                _priceMessages.asset,
                 _priceMessages.price,
                 _priceMessages.chainId,
                 _priceMessages.timestamp
             )
         );
+
+        // Create EIP-712 typed data hash
+        bytes32 digest = _hashTypedDataV4(structHash);
+
         bytes memory signature = _priceMessages.signature;
-        address signer = ECDSA.recover(message, signature);
+        address signer = ECDSA.recover(digest, signature);
+
         require(isKeeper[signer], "Oracle: invalid signer");
         require(
             block.chainid == _priceMessages.chainId,
@@ -105,6 +121,19 @@ contract Oracle is Ownable2Step, Pausable {
             "Oracle: invalid timestamp"
         );
         return signer;
+    }
+
+    /// @notice Returns the EIP-712 hash for a PriceMessage (for off-chain signing)
+    function getPriceMessageHash(
+        address asset,
+        uint256 price,
+        uint256 chainId,
+        uint256 timestamp
+    ) external view returns (bytes32) {
+        bytes32 structHash = keccak256(
+            abi.encode(PRICE_MESSAGE_TYPEHASH, asset, price, chainId, timestamp)
+        );
+        return _hashTypedDataV4(structHash);
     }
 
     function validateSigners(address[] memory _seenSigners) internal pure {
