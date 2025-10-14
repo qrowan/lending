@@ -72,8 +72,7 @@ contract Vault is ERC4626, ERC20Votes, Ownable2Step, ReentrancyGuard {
     function setInterestRate(
         uint _interestRatePerSecond
     ) external onlyGovernanceOrOwner {
-        uint lentAssets = lentAssets();
-        lentAmountStored = lentAssets;
+        lentAmountStored = lentAssets();
         lastUpdated = block.timestamp;
         interestRatePerSecond = _interestRatePerSecond;
     }
@@ -101,8 +100,8 @@ contract Vault is ERC4626, ERC20Votes, Ownable2Step, ReentrancyGuard {
     }
 
     function _updateLentAmount(uint256 _amount, bool _add) private {
-        uint lentAssets = lentAssets();
-        lentAmountStored = _add ? lentAssets + _amount : lentAssets - _amount;
+        uint _lentAssets = lentAssets();
+        lentAmountStored = _add ? _lentAssets + _amount : _lentAssets - _amount;
         lastUpdated = block.timestamp;
     }
 

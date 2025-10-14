@@ -53,7 +53,7 @@ contract Setup is TestUtils {
     uint256 public keeper3Key;
     uint256 public keeper4Key;
 
-    function setUp() public {
+    function setUp() public virtual {
         (deployer, ) = makeAddrAndKey("deployer");
         (keeper1, keeper1Key) = makeAddrAndKey("keeper1");
         (keeper2, keeper2Key) = makeAddrAndKey("keeper2");
@@ -176,11 +176,10 @@ contract Setup is TestUtils {
         uint256 timestamp = block.timestamp;
         uint256 chainId = block.chainid;
 
-        bytes32 digest = keccak256(
-            abi.encodePacked(asset, price, chainId, timestamp)
-        );
+        // Use Oracle's EIP-712 hash function
+        bytes32 digest = oracle.getPriceMessageHash(asset, price, chainId, timestamp);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
-        bytes memory signature = createSignature(v, r, s);
+        bytes memory signature = abi.encodePacked(r, s, v);
 
         return
             PriceMessage({
@@ -192,17 +191,4 @@ contract Setup is TestUtils {
             });
     }
 
-    function createSignature(
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) public pure returns (bytes memory) {
-        bytes memory signature = new bytes(65);
-        assembly {
-            mstore(add(signature, 32), r)
-            mstore(add(signature, 64), s)
-            mstore8(add(signature, 96), v)
-        }
-        return signature;
-    }
 }
