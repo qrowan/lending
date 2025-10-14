@@ -3,9 +3,9 @@ pragma solidity ^0.8.13;
 
 import {Test} from "forge-std/Test.sol";
 import {ERC20Mock} from "lib/openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
-import {Vault} from "../src/core/Vault.sol";
-import {Config} from "../src/core/Config.sol";
-import {VaultGovernor} from "../src/governance/VaultGovernor.sol";
+import {Vault} from "../../src/core/Vault.sol";
+import {Config} from "../../src/core/Config.sol";
+import {VaultGovernor} from "../../src/governance/VaultGovernor.sol";
 import {IGovernor} from "lib/openzeppelin-contracts/contracts/governance/IGovernor.sol";
 
 contract VaultGovernorTest is Test {

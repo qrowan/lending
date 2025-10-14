@@ -1,0 +1,7 @@
+# Echidna Configuration for Vault Governance Testing
+
+testMode: property
+testLimit: 1000
+timeout: 300
+seqLen: 10
+coverage: true

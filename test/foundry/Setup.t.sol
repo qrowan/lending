@@ -2,17 +2,17 @@
 pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
-import {Vault} from "../src/core/Vault.sol";
+import {Vault} from "../../src/core/Vault.sol";
 import {ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {TransparentUpgradeableProxy} from "lib/openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {InterestRate} from "../src/constants/InterestRate.sol";
+import {InterestRate} from "../../src/constants/InterestRate.sol";
 import {TestUtils} from "./TestUtils.sol";
 import {ProxyAdmin} from "lib/openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
-import {Config} from "../src/core/Config.sol";
-import {MultiAssetPosition} from "../src/position/MultiAssetPosition.sol";
+import {Config} from "../../src/core/Config.sol";
+import {MultiAssetPosition} from "../../src/position/MultiAssetPosition.sol";
 import {Strings} from "lib/openzeppelin-contracts/contracts/utils/Strings.sol";
-import {Oracle, PriceMessage} from "../src/oracle/Oracle.sol";
-import {Liquidator} from "../src/core/Liquidator.sol";
+import {Oracle, PriceMessage} from "../../src/oracle/Oracle.sol";
+import {Liquidator} from "../../src/core/Liquidator.sol";
 
 contract ERC20Customized is ERC20 {
     constructor(
@@ -101,7 +101,6 @@ contract Setup is TestUtils {
             console.log("vault", address(_vault));
 
             vaults[i].setWhitelisted(address(multiAssetPosition), true);
-            
         }
 
         (user, ) = makeAddrAndKey("user");

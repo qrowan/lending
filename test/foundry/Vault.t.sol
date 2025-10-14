@@ -2,9 +2,9 @@
 pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
-import {Vault} from "../src/core/Vault.sol";
+import {Vault} from "../../src/core/Vault.sol";
 import {ERC20Mock} from "lib/openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
-import {InterestRate} from "../src/constants/InterestRate.sol";
+import {InterestRate} from "../../src/constants/InterestRate.sol";
 import {Base} from "./Base.t.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
@@ -87,58 +87,80 @@ contract VaultTest is Base {
     function test_update_interest_rate() public {
         address asset = address(assets[0]);
         Vault vault = vaultOf(asset);
-        
+
         // Deposit initial funds
         _test_deposit(user, asset, 10 ether);
-        
+
         // Borrow some amount
         uint lentAmount = 1 ether;
         vm.startPrank(address(multiAssetPosition));
         vault.borrow(lentAmount, address(vault));
         vm.stopPrank();
-        
+
         // Record initial state
         uint initialLentAssets = vault.lentAssets();
         assertEq(initialLentAssets, lentAmount);
-        
+
         // Earn interest with 15% APR for 1 year
         _timeElapse(86400 * 365); // 1 year
         uint lentAssetsAfter15Percent = vault.lentAssets();
-        
+
         // Calculate expected interest with 15% APR
         uint interestRate15 = InterestRate.getInterestRateForDuration(
             InterestRate.INTEREST_RATE_15,
             86400 * 365
         );
-        uint expected15 = lentAmount + (lentAmount * interestRate15) / InterestRate.BASE;
-        assertEq(lentAssetsAfter15Percent, expected15, "15% APR calculation incorrect");
-        
+        uint expected15 = lentAmount +
+            (lentAmount * interestRate15) /
+            InterestRate.BASE;
+        assertEq(
+            lentAssetsAfter15Percent,
+            expected15,
+            "15% APR calculation incorrect"
+        );
+
         // Change interest rate to 20% APR via governance
         vm.prank(vault.governor());
         vault.setInterestRate(InterestRate.INTEREST_RATE_20);
-        
+
         // Verify interest rate changed
         assertEq(vault.interestRatePerSecond(), InterestRate.INTEREST_RATE_20);
-        
+
         // The lentAssets should remain the same immediately after rate change
         uint lentAssetsAfterRateChange = vault.lentAssets();
-        assertEq(lentAssetsAfterRateChange, lentAssetsAfter15Percent, "Assets should not change immediately");
-        
+        assertEq(
+            lentAssetsAfterRateChange,
+            lentAssetsAfter15Percent,
+            "Assets should not change immediately"
+        );
+
         // Earn interest with 20% APR for another 1 year
         _timeElapse(86400 * 365); // Another 1 year
         uint finalLentAssets = vault.lentAssets();
-        
+
         // Calculate expected interest with 20% APR on the current amount
         uint interestRate20 = InterestRate.getInterestRateForDuration(
             InterestRate.INTEREST_RATE_20,
             86400 * 365
         );
-        uint expectedFinal = lentAssetsAfterRateChange + (lentAssetsAfterRateChange * interestRate20) / InterestRate.BASE;
-        assertEq(finalLentAssets, expectedFinal, "20% APR calculation incorrect");
-        
+        uint expectedFinal = lentAssetsAfterRateChange +
+            (lentAssetsAfterRateChange * interestRate20) /
+            InterestRate.BASE;
+        assertEq(
+            finalLentAssets,
+            expectedFinal,
+            "20% APR calculation incorrect"
+        );
+
         // Verify final totalAssets includes the compounded interest
         uint totalAssets = vault.totalAssets();
-        uint expectedTotalAssets = IERC20(vault.asset()).balanceOf(address(vault)) + finalLentAssets;
-        assertEq(totalAssets, expectedTotalAssets, "Total assets calculation incorrect");
+        uint expectedTotalAssets = IERC20(vault.asset()).balanceOf(
+            address(vault)
+        ) + finalLentAssets;
+        assertEq(
+            totalAssets,
+            expectedTotalAssets,
+            "Total assets calculation incorrect"
+        );
     }
 }
