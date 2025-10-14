@@ -47,6 +47,7 @@ contract MultiAssetPosition is
     address public oracle;
     uint public constant INITIALIZATION_THRESHOLD = 20000;
     uint public constant LIQUIDATION_THRESHOLD = 15000;
+    uint public maxLiquidationBonusRate = 11500;
     address public liquidator;
     constructor(
         address _config,
@@ -116,6 +117,17 @@ contract MultiAssetPosition is
         if (_balanceType == BalanceType.CREDIT && balance <= 0)
             revert NoCredit();
         _;
+    }
+
+    function setMaxLiquidationBonusRate(
+        uint _maxLiquidationBonusRate
+    ) external onlyOwner {
+        require(
+            _maxLiquidationBonusRate >= 10500 &&
+                _maxLiquidationBonusRate <= 11500,
+            "Invalid bonus rate"
+        );
+        maxLiquidationBonusRate = _maxLiquidationBonusRate;
     }
 
     function mint(address _to) external nonReentrant returns (uint256) {
@@ -324,11 +336,18 @@ contract MultiAssetPosition is
                 );
         }
         (uint256 collateralAfter, uint256 debtAfter) = health(_tokenId);
+
+        // For vault holders
         require(
             debtAfter * collateralBefore < debtBefore * collateralAfter,
             "Health decreased"
         );
-        require(rewardValue < repaidValue * 2, "Too much reward");
+
+        // For position holders and vault holders
+        require(
+            rewardValue <= (repaidValue * maxLiquidationBonusRate) / 10000,
+            "Too much reward"
+        );
         return;
     }
 }
