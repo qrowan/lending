@@ -1,25 +1,56 @@
-# Claude Code Patterns - Rowan-Fi Lending Protocol
+# CLAUDE.md
 
-This document contains code patterns and conventions for the Rowan-Fi lending protocol to help Claude Code assist with development.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+# Rowan-Fi Lending Protocol
+
+This document contains architecture, patterns, and development guidance for the Rowan-Fi lending protocol.
+
+## Core Architecture
+
+The protocol consists of multiple interconnected contract systems:
+
+### Core Contracts
+- **Config**: Central registry managing vault and position whitelisting
+- **Vault**: ERC4626-compliant lending vaults with governance (ERC20Votes) and compound interest
+- **MultiAssetPosition**: ERC721 position NFTs with multi-vault collateral/debt tracking
+- **VaultGovernor**: Per-vault governance using OpenZeppelin Governor framework
+- **Liquidator**: Handles position liquidations with configurable bonus rates
+
+### Key Architecture Patterns
+- **Non-Upgradeable Design**: All contracts use standard OpenZeppelin contracts with constructors (no upgradeable patterns)
+- **Per-Vault Governance**: Each vault deploys its own VaultGovernor contract for decentralized interest rate control
+- **Interest Accrual**: Continuous per-second compound interest using `InterestRate` library
+- **Position Balance Model**: Positions track signed balances (positive = collateral, negative = debt)
+- **Whitelist-Based Access**: Vaults whitelist contracts that can borrow funds
 
 ## Project Structure
 
 ```
 src/
-├── Config.sol                    # Central registry for positions and vaults
-├── Vault.sol                   # ERC4626 lending vault implementation
-├── MultiAssetPosition.sol                # ERC721 position management with collateral/debt tracking
-├── Oracle.sol                  # Price oracle functionality
+├── core/
+│   ├── Config.sol              # Registry for vaults/positions
+│   ├── Vault.sol               # ERC4626 + ERC20Votes + governance
+│   └── Liquidator.sol          # Position liquidation logic
+├── position/
+│   ├── MultiAssetPosition.sol  # ERC721 position management
+│   └── IPosition.sol           # Position interface
+├── governance/
+│   └── VaultGovernor.sol       # OpenZeppelin Governor implementation
+├── oracle/
+│   └── Oracle.sol              # Price oracle with signature verification
 └── constants/
-    └── InterestRate.sol         # Interest rate calculations and constants
+    └── InterestRate.sol        # Interest rate constants and calculations
+
 test/
-├── Setup.t.sol                 # Test setup and utilities
-├── Vault.t.sol                 # Vault contract tests
-├── Position.t.sol              # Position contract tests
-├── Oracle.t.sol                # Oracle contract tests
-└── TestUtils.sol               # Test helper functions
-script/
-└── Vault.s.sol                 # Deployment script
+├── foundry/                    # Standard Foundry tests
+│   ├── Base.t.sol             # Test base setup
+│   ├── Vault.t.sol            # Vault functionality tests
+│   ├── VaultVotes.t.sol       # Governance voting tests
+│   └── VaultGovernor.t.sol    # Governor integration tests
+└── echidna/                    # Fuzzing tests
+    ├── VaultEchidna.sol       # Property-based fuzzing
+    └── VaultAssertions.sol    # Assertion-based fuzzing
 ```
 
 ## Code Patterns & Conventions
@@ -27,26 +58,11 @@ script/
 ### Import Organization
 
 ```solidity
-// Standard pattern for imports
-import {ContractName} from "openzeppelin-contracts-upgradeable/contracts/path/ContractName.sol";
-import {LibraryName} from "openzeppelin-contracts/contracts/path/LibraryName.sol";
+// Standard pattern for imports (non-upgradeable)
+import {ContractName} from "lib/openzeppelin-contracts/contracts/path/ContractName.sol";
 import {LocalInterface} from "./LocalContract.sol";
 ```
 
-### Upgradeable Contract Pattern
-
-```solidity
-contract ContractName is ContractUpgradeable, Ownable2StepUpgradeable {
-    constructor() {
-        _disableInitializers();
-    }
-
-    function initialize(address param) external initializer {
-        __ContractName_init(param);
-        __Ownable_init(msg.sender);
-    }
-}
-```
 
 ### Access Control Modifiers
 
@@ -199,41 +215,71 @@ contract Setup is Test {
 }
 ```
 
-## Build & Test Commands
+## Development Commands
 
+### Build & Test
 ```bash
 # Build contracts
 forge build
 
-# Run tests
+# Run all tests
 forge test
+
+# Run specific test file
+forge test --match-path test/foundry/Vault.t.sol
+
+# Run specific test function
+forge test --match-test test_update_interest_rate
 
 # Run tests with gas reporting
 forge test --gas-report
 
-# Run specific test
-forge test --match-test testFunctionName
-
 # Format code
 forge fmt
+```
 
-# Deploy script
-forge script script/Vault.s.sol:VaultScript --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast
+### Fuzzing with Echidna
+```bash
+# Install Echidna (macOS)
+brew install echidna
+
+# Run property-based fuzzing
+echidna test/echidna/VaultEchidna.sol --contract VaultEchidna --config echidna.yaml
+
+# Run assertion-based fuzzing (bug finding)
+echidna test/echidna/VaultAssertions.sol --contract VaultAssertions --config echidna-assertions.yaml
+
+# Extended fuzzing (production)
+echidna test/echidna/VaultEchidna.sol --contract VaultEchidna --test-limit 50000 --timeout 3600
+```
+
+### Local Development
+```bash
+# Start local Anvil node
+anvil
+
+# Deploy to local node
+forge script script/Vault.s.sol:VaultScript --rpc-url http://localhost:8545 --private-key $PRIVATE_KEY --broadcast
+
+# Interact with contracts
+cast call $VAULT_ADDRESS "totalAssets()(uint256)" --rpc-url http://localhost:8545
+cast call $VAULT_ADDRESS "getVotes(address)(uint256)" $USER_ADDRESS --rpc-url http://localhost:8545
 ```
 
 ## Contract Deployment Order
 
 1. Deploy Config contract
-2. Deploy Position contract with Config address
-3. Deploy Vault contracts with asset and Config addresses
+2. Deploy MultiAssetPosition with Config and Oracle addresses
+3. Deploy Vault contracts (each creates its own VaultGovernor)
 4. Register Position in Config via `setPosition()`
 5. Register Vaults in Config via `addVault()`
+6. Configure position liquidator and vault whitelisting
 
 ## Key Dependencies
 
-- OpenZeppelin Contracts (Upgradeable): For upgradeable contract patterns
-- OpenZeppelin Contracts: For standard implementations
-- Forge-std: For testing utilities
+- **OpenZeppelin Contracts**: Standard (non-upgradeable) implementations (ERC4626, ERC20Votes, Governor, etc.)
+- **Forge-std**: Testing utilities and base test contracts
+- **Echidna**: Property-based fuzzing for security testing
 
 ## Interest Rate Constants
 
@@ -246,9 +292,35 @@ Available in `InterestRate.sol`:
 - `INTEREST_RATE_20` - 20% APY
 - Higher rates available up to 1000000000% APY
 
-## Architecture Notes
+## Critical Architecture Details
 
-- All contracts are upgradeable using OpenZeppelin's upgradeable contracts
-- Position balances can be positive (credit/collateral) or negative (debt)
-- Vaults accrue interest continuously using per-second compound interest
-- Config contract acts as registry and access control for the protocol
+### Governance Model
+- **Per-Vault Governance**: Each vault has its own VaultGovernor contract
+- **Dual Control Phase**: Initially owner-controlled, transitions to governance when vault has deposits
+- **Interest Rate Control**: Vault token holders vote on interest rate changes
+- **Voting Power**: Based on vault token (ERC20Votes) holdings with delegation support
+
+### Position Management
+- **Signed Balance System**: Positions track balances as signed integers (+ = collateral, - = debt)
+- **Multi-Asset Support**: Single position can have collateral/debt across multiple vaults
+- **Health Factor**: Based on oracle prices and liquidation thresholds
+- **NFT Representation**: Each position is an ERC721 token
+
+### Interest & Liquidation
+- **Continuous Compound Interest**: Per-second calculation using `InterestRate.calculatePrincipalPlusInterest`
+- **Interest Rate State Updates**: When rate changes, current interest is calculated and stored
+- **Liquidation Bonuses**: Configurable per-position-contract, affects all connected vaults
+- **Whitelist-Based Borrowing**: Only whitelisted contracts can borrow from vaults
+
+### Security Features
+- **Dead Shares Protection**: 1000 shares minted to dead address prevents inflation attacks
+- **Reentrancy Guards**: All state-changing functions protected
+- **Access Control**: Role-based permissions using OpenZeppelin patterns
+- **Fuzzing Integration**: Echidna property-based testing for invariant verification
+
+## Configuration Notes
+
+- **Arbitrum Deployment**: Configured for Arbitrum mainnet (foundry.toml)
+- **Solidity Version**: 0.8.22 with via-IR optimization enabled
+- **Test Structure**: Separated into foundry/ and echidna/ directories
+- **Non-Upgradeable**: Protocol converted from upgradeable to standard contracts for simplicity
