@@ -5,6 +5,7 @@ import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import {Pausable} from "lib/openzeppelin-contracts/contracts/utils/Pausable.sol";
 
 import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+import {Arrays} from "lib/openzeppelin-contracts/contracts/utils/Arrays.sol";
 
 struct PriceMessage {
     address asset;
@@ -15,6 +16,7 @@ struct PriceMessage {
 }
 contract Oracle is Ownable2Step, Pausable {
     using ECDSA for bytes32;
+    using Arrays for uint[];
     mapping(address => ReferenceData) public referenceData;
     mapping(address => bool) public isKeeper;
     uint public constant PRECISION = 1e18;
@@ -118,31 +120,13 @@ contract Oracle is Ownable2Step, Pausable {
     }
 
     function median(uint[] memory _priceOpinions) internal pure returns (uint) {
-        uint[] memory sortedPrices = new uint[](_priceOpinions.length);
-        for (uint i = 0; i < _priceOpinions.length; i++) {
-            sortedPrices[i] = _priceOpinions[i];
-        }
-
-        // Sort the array
-        for (uint i = 0; i < sortedPrices.length - 1; i++) {
-            for (uint j = 0; j < sortedPrices.length - i - 1; j++) {
-                if (sortedPrices[j] > sortedPrices[j + 1]) {
-                    uint temp = sortedPrices[j];
-                    sortedPrices[j] = sortedPrices[j + 1];
-                    sortedPrices[j + 1] = temp;
-                }
-            }
-        }
-
-        uint length = sortedPrices.length;
-        if (length % 2 == 0) {
-            // Even number of elements: average of middle two
-            return
-                (sortedPrices[length / 2 - 1] + sortedPrices[length / 2]) / 2;
-        } else {
-            // Odd number of elements: middle element
-            return sortedPrices[length / 2];
-        }
+        Arrays.sort(_priceOpinions);
+        uint length = _priceOpinions.length;
+        return
+            length % 2 == 0
+                ? (_priceOpinions[length / 2 - 1] +
+                    _priceOpinions[length / 2]) / 2
+                : _priceOpinions[length / 2];
     }
 
     function pause() external onlyOwner {
