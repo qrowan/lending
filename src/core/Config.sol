@@ -5,7 +5,6 @@ import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import {EnumerableSet} from "lib/openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 
 interface IConfig {
-    function isWhitelisted(address _position) external view returns (bool);
     function isVault(address _vault) external view returns (bool);
     function getLiquidator() external view returns (address);
 }
