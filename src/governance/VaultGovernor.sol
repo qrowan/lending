@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {Governor} from "lib/openzeppelin-contracts/contracts/governance/Governor.sol";
-import {GovernorVotes} from "lib/openzeppelin-contracts/contracts/governance/extensions/GovernorVotes.sol";
-import {GovernorCountingSimple} from "lib/openzeppelin-contracts/contracts/governance/extensions/GovernorCountingSimple.sol";
-import {IVotes} from "lib/openzeppelin-contracts/contracts/governance/utils/IVotes.sol";
+import {Governor} from "@openzeppelin/contracts/governance/Governor.sol";
+import {GovernorVotes} from "@openzeppelin/contracts/governance/extensions/GovernorVotes.sol";
+import {GovernorCountingSimple} from "@openzeppelin/contracts/governance/extensions/GovernorCountingSimple.sol";
+import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 
 contract VaultGovernor is Governor, GovernorVotes, GovernorCountingSimple {
     constructor(

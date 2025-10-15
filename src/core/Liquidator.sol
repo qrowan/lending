@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {IPosition} from "../position/IPosition.sol";
+import {IPosition} from "@position/IPosition.sol";
 contract Liquidator {
     address public config;
 
