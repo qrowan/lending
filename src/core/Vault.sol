@@ -72,6 +72,7 @@ contract Vault is ERC4626, ERC20Votes, Ownable2Step, ReentrancyGuard {
     function setInterestRate(
         uint _interestRatePerSecond
     ) external onlyGovernanceOrOwner {
+      // TODO: should be delayed. or restricted with some conditions.
         lentAmountStored = lentAssets();
         lastUpdated = block.timestamp;
         interestRatePerSecond = _interestRatePerSecond;
