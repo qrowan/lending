@@ -27,8 +27,8 @@ contract Vault is ERC4626, ERC20Votes, Ownable2Step, ReentrancyGuard {
     address constant DEAD_ADDRESS =
         address(0x000000000000000000000000000000000000dEaD);
     uint public interestRatePerSecond = InterestRate.INTEREST_RATE_15;
-    uint public lentAmountStored; // TODO: private
-    uint public lastUpdated; // TODO: private
+    uint public lentAmountStored;
+    uint public lastUpdated;
     address public config;
     mapping(address => bool) public isWhitelisted;
     address public governor;
@@ -72,7 +72,7 @@ contract Vault is ERC4626, ERC20Votes, Ownable2Step, ReentrancyGuard {
     function setInterestRate(
         uint _interestRatePerSecond
     ) external onlyGovernanceOrOwner {
-      // TODO: should be delayed. or restricted with some conditions.
+        // TODO: should be delayed. or restricted with some conditions.
         lentAmountStored = lentAssets();
         lastUpdated = block.timestamp;
         interestRatePerSecond = _interestRatePerSecond;
