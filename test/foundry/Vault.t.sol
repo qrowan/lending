@@ -29,15 +29,15 @@ contract VaultTest is Base {
     function test_prevent_inflation_attack() public {
         address asset = address(assets[0]);
         Vault vault = vaultOf(asset);
-        (address attacker, ) = makeAddrAndKey("attacker");
+        (address attacker,) = makeAddrAndKey("attacker");
         inflaction_attack(attacker);
         deal(address(asset), user, 100e18);
-        uint estimatedBefore = estimateBalance(asset, user);
+        uint256 estimatedBefore = estimateBalance(asset, user);
         vm.startPrank(user);
         IERC20(asset).approve(address(vault), type(uint256).max);
         vault.deposit(100e18, user);
         vm.stopPrank();
-        uint estimatedAfter = estimateBalance(asset, user);
+        uint256 estimatedAfter = estimateBalance(asset, user);
         assertGt(estimatedAfter, (estimatedBefore * 99) / 100, "attacked");
     }
 
@@ -45,9 +45,7 @@ contract VaultTest is Base {
         address asset = address(assets[0]);
         Vault vault = vaultOf(asset);
         deal(address(asset), attacker, 100e18 + 1);
-        console.log(
-            "[inflation attack] attacker deposits 1 wei, transfers 100e18"
-        );
+        console.log("[inflation attack] attacker deposits 1 wei, transfers 100e18");
         vm.startPrank(attacker);
         IERC20(asset).approve(address(vault), type(uint256).max);
         vault.deposit(1, attacker);
@@ -55,33 +53,22 @@ contract VaultTest is Base {
         vm.stopPrank();
     }
 
-    function estimateBalance(
-        address _asset,
-        address _user
-    ) private view returns (uint256) {
-        return
-            IERC20(_asset).balanceOf(_user) +
-            vaultOf(_asset).previewRedeem(vaultOf(_asset).balanceOf(_user));
+    function estimateBalance(address _asset, address _user) private view returns (uint256) {
+        return IERC20(_asset).balanceOf(_user) + vaultOf(_asset).previewRedeem(vaultOf(_asset).balanceOf(_user));
     }
 
     function test_borrow() public {
         address asset = address(assets[0]);
         Vault vault = vaultOf(asset);
         _test_deposit(user, asset, 1 ether);
-        uint interestRate = InterestRate.getInterestRateForDuration(
-            vault.interestRatePerSecond(),
-            86400 * 365
-        );
-        uint lentAmount = 0.1 ether;
+        uint256 interestRate = InterestRate.getInterestRateForDuration(vault.interestRatePerSecond(), 86400 * 365);
+        uint256 lentAmount = 0.1 ether;
         vm.startPrank(address(multiAssetPosition));
         vault.borrow(lentAmount, address(vault));
         vm.stopPrank();
         assertEq(vault.lentAssets(), lentAmount);
         _timeElapse(86400 * 365);
-        assertEq(
-            vault.lentAssets(),
-            lentAmount + (lentAmount * interestRate) / InterestRate.BASE
-        );
+        assertEq(vault.lentAssets(), lentAmount + (lentAmount * interestRate) / InterestRate.BASE);
     }
 
     function test_update_interest_rate() public {
@@ -92,32 +79,23 @@ contract VaultTest is Base {
         _test_deposit(user, asset, 10 ether);
 
         // Borrow some amount
-        uint lentAmount = 1 ether;
+        uint256 lentAmount = 1 ether;
         vm.startPrank(address(multiAssetPosition));
         vault.borrow(lentAmount, address(vault));
         vm.stopPrank();
 
         // Record initial state
-        uint initialLentAssets = vault.lentAssets();
+        uint256 initialLentAssets = vault.lentAssets();
         assertEq(initialLentAssets, lentAmount);
 
         // Earn interest with 15% APR for 1 year
         _timeElapse(86400 * 365); // 1 year
-        uint lentAssetsAfter15Percent = vault.lentAssets();
+        uint256 lentAssetsAfter15Percent = vault.lentAssets();
 
         // Calculate expected interest with 15% APR
-        uint interestRate15 = InterestRate.getInterestRateForDuration(
-            InterestRate.INTEREST_RATE_15,
-            86400 * 365
-        );
-        uint expected15 = lentAmount +
-            (lentAmount * interestRate15) /
-            InterestRate.BASE;
-        assertEq(
-            lentAssetsAfter15Percent,
-            expected15,
-            "15% APR calculation incorrect"
-        );
+        uint256 interestRate15 = InterestRate.getInterestRateForDuration(InterestRate.INTEREST_RATE_15, 86400 * 365);
+        uint256 expected15 = lentAmount + (lentAmount * interestRate15) / InterestRate.BASE;
+        assertEq(lentAssetsAfter15Percent, expected15, "15% APR calculation incorrect");
 
         // Change interest rate to 20% APR via governance
         vm.prank(vault.governor());
@@ -127,40 +105,22 @@ contract VaultTest is Base {
         assertEq(vault.interestRatePerSecond(), InterestRate.INTEREST_RATE_20);
 
         // The lentAssets should remain the same immediately after rate change
-        uint lentAssetsAfterRateChange = vault.lentAssets();
-        assertEq(
-            lentAssetsAfterRateChange,
-            lentAssetsAfter15Percent,
-            "Assets should not change immediately"
-        );
+        uint256 lentAssetsAfterRateChange = vault.lentAssets();
+        assertEq(lentAssetsAfterRateChange, lentAssetsAfter15Percent, "Assets should not change immediately");
 
         // Earn interest with 20% APR for another 1 year
         _timeElapse(86400 * 365); // Another 1 year
-        uint finalLentAssets = vault.lentAssets();
+        uint256 finalLentAssets = vault.lentAssets();
 
         // Calculate expected interest with 20% APR on the current amount
-        uint interestRate20 = InterestRate.getInterestRateForDuration(
-            InterestRate.INTEREST_RATE_20,
-            86400 * 365
-        );
-        uint expectedFinal = lentAssetsAfterRateChange +
-            (lentAssetsAfterRateChange * interestRate20) /
-            InterestRate.BASE;
-        assertEq(
-            finalLentAssets,
-            expectedFinal,
-            "20% APR calculation incorrect"
-        );
+        uint256 interestRate20 = InterestRate.getInterestRateForDuration(InterestRate.INTEREST_RATE_20, 86400 * 365);
+        uint256 expectedFinal =
+            lentAssetsAfterRateChange + (lentAssetsAfterRateChange * interestRate20) / InterestRate.BASE;
+        assertEq(finalLentAssets, expectedFinal, "20% APR calculation incorrect");
 
         // Verify final totalAssets includes the compounded interest
-        uint totalAssets = vault.totalAssets();
-        uint expectedTotalAssets = IERC20(vault.asset()).balanceOf(
-            address(vault)
-        ) + finalLentAssets;
-        assertEq(
-            totalAssets,
-            expectedTotalAssets,
-            "Total assets calculation incorrect"
-        );
+        uint256 totalAssets = vault.totalAssets();
+        uint256 expectedTotalAssets = IERC20(vault.asset()).balanceOf(address(vault)) + finalLentAssets;
+        assertEq(totalAssets, expectedTotalAssets, "Total assets calculation incorrect");
     }
 }

@@ -18,11 +18,7 @@ contract Base is Setup {
         }
     }
 
-    function _test_deposit(
-        address _user,
-        address _asset,
-        uint256 _amount
-    ) internal {
+    function _test_deposit(address _user, address _asset, uint256 _amount) internal {
         console.log("asset", address(_asset));
         Vault vault = vaultOf(_asset);
         console.log("vault", address(vault));
@@ -34,11 +30,7 @@ contract Base is Setup {
         vm.stopPrank();
     }
 
-    function _test_withdraw(
-        address _user,
-        address _asset,
-        uint256 _amount
-    ) internal {
+    function _test_withdraw(address _user, address _asset, uint256 _amount) internal {
         _test_deposit(_user, _asset, _amount);
         Vault vault = vaultOf(_asset);
 

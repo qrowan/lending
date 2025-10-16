@@ -57,25 +57,13 @@ contract VaultGovernorTest is Test {
 
         targets[0] = address(vault);
         values[0] = 0;
-        calldatas[0] = abi.encodeWithSignature(
-            "setWhitelisted(address,bool)",
-            alice,
-            true
-        );
+        calldatas[0] = abi.encodeWithSignature("setWhitelisted(address,bool)", alice, true);
 
         vm.prank(alice);
-        uint256 proposalId = governor.propose(
-            targets,
-            values,
-            calldatas,
-            "Proposal: Whitelist Alice"
-        );
+        uint256 proposalId = governor.propose(targets, values, calldatas, "Proposal: Whitelist Alice");
         vm.roll(block.number + 1);
 
-        assertEq(
-            uint256(governor.state(proposalId)),
-            uint256(IGovernor.ProposalState.Active)
-        );
+        assertEq(uint256(governor.state(proposalId)), uint256(IGovernor.ProposalState.Active));
     }
 
     function test_VoteOnProposal() public {
@@ -86,19 +74,10 @@ contract VaultGovernorTest is Test {
 
         targets[0] = address(vault);
         values[0] = 0;
-        calldatas[0] = abi.encodeWithSignature(
-            "setWhitelisted(address,bool)",
-            alice,
-            true
-        );
+        calldatas[0] = abi.encodeWithSignature("setWhitelisted(address,bool)", alice, true);
 
         vm.prank(alice);
-        uint256 proposalId = governor.propose(
-            targets,
-            values,
-            calldatas,
-            "Proposal: Whitelist Alice"
-        );
+        uint256 proposalId = governor.propose(targets, values, calldatas, "Proposal: Whitelist Alice");
 
         // Move to next block to allow voting
         vm.roll(block.number + 1);
@@ -111,11 +90,7 @@ contract VaultGovernorTest is Test {
         governor.castVote(proposalId, 1); // Vote FOR
 
         // Check votes
-        (
-            uint256 againstVotes,
-            uint256 forVotes,
-            uint256 abstainVotes
-        ) = governor.proposalVotes(proposalId);
+        (uint256 againstVotes, uint256 forVotes, uint256 abstainVotes) = governor.proposalVotes(proposalId);
         assertTrue(forVotes > 0);
         assertEq(againstVotes, 0);
         assertEq(abstainVotes, 0);
@@ -129,19 +104,10 @@ contract VaultGovernorTest is Test {
 
         targets[0] = address(vault);
         values[0] = 0;
-        calldatas[0] = abi.encodeWithSignature(
-            "setWhitelisted(address,bool)",
-            alice,
-            true
-        );
+        calldatas[0] = abi.encodeWithSignature("setWhitelisted(address,bool)", alice, true);
 
         vm.prank(alice);
-        uint256 proposalId = governor.propose(
-            targets,
-            values,
-            calldatas,
-            "Proposal: Whitelist Alice"
-        );
+        uint256 proposalId = governor.propose(targets, values, calldatas, "Proposal: Whitelist Alice");
 
         // Move to next block to allow voting
         vm.roll(block.number + 1);
@@ -154,25 +120,14 @@ contract VaultGovernorTest is Test {
         vm.roll(block.number + governor.votingPeriod() + 1);
 
         // Check state is Succeeded
-        assertEq(
-            uint256(governor.state(proposalId)),
-            uint256(IGovernor.ProposalState.Succeeded)
-        );
+        assertEq(uint256(governor.state(proposalId)), uint256(IGovernor.ProposalState.Succeeded));
 
         // Execute proposal
-        governor.execute(
-            targets,
-            values,
-            calldatas,
-            keccak256(bytes("Proposal: Whitelist Alice"))
-        );
+        governor.execute(targets, values, calldatas, keccak256(bytes("Proposal: Whitelist Alice")));
 
         // Check execution result
         assertTrue(vault.isWhitelisted(alice));
-        assertEq(
-            uint256(governor.state(proposalId)),
-            uint256(IGovernor.ProposalState.Executed)
-        );
+        assertEq(uint256(governor.state(proposalId)), uint256(IGovernor.ProposalState.Executed));
     }
 
     function test_ProposalWithInsufficientVotes() public {
@@ -186,19 +141,10 @@ contract VaultGovernorTest is Test {
 
         targets[0] = address(vault);
         values[0] = 0;
-        calldatas[0] = abi.encodeWithSignature(
-            "setWhitelisted(address,bool)",
-            alice,
-            true
-        );
+        calldatas[0] = abi.encodeWithSignature("setWhitelisted(address,bool)", alice, true);
 
         vm.prank(alice);
-        uint256 proposalId = strictGovernor.propose(
-            targets,
-            values,
-            calldatas,
-            "Proposal: Whitelist Alice"
-        );
+        uint256 proposalId = strictGovernor.propose(targets, values, calldatas, "Proposal: Whitelist Alice");
 
         // Move to next block to allow voting
         vm.roll(block.number + 1);
@@ -211,9 +157,6 @@ contract VaultGovernorTest is Test {
         vm.roll(block.number + strictGovernor.votingPeriod() + 1);
 
         // Should succeed because our quorum is only 1
-        assertEq(
-            uint256(strictGovernor.state(proposalId)),
-            uint256(IGovernor.ProposalState.Succeeded)
-        );
+        assertEq(uint256(strictGovernor.state(proposalId)), uint256(IGovernor.ProposalState.Succeeded));
     }
 }

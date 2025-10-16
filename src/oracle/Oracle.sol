@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
+
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
@@ -14,32 +15,29 @@ struct PriceMessage {
     uint256 timestamp;
     bytes signature;
 }
+
 contract Oracle is Ownable2Step, Pausable, EIP712 {
     using ECDSA for bytes32;
-    using Arrays for uint[];
+    using Arrays for uint256[];
 
     // EIP-712 type hash for PriceMessage
     bytes32 private constant PRICE_MESSAGE_TYPEHASH =
-        keccak256(
-            "PriceMessage(address asset,uint256 price,uint256 chainId,uint256 timestamp)"
-        );
+        keccak256("PriceMessage(address asset,uint256 price,uint256 chainId,uint256 timestamp)");
 
     mapping(address => ReferenceData) public referenceData;
     mapping(address => bool) public isKeeper;
-    uint public constant PRECISION = 1e18;
-    uint public requiredSignatures;
-    uint public priceDuration = 10 seconds;
+    uint256 public constant PRECISION = 1e18;
+    uint256 public requiredSignatures;
+    uint256 public priceDuration = 10 seconds;
 
-    constructor(
-        uint _requiredSignatures
-    ) Ownable(msg.sender) EIP712("RowanFi Oracle", "1") {
+    constructor(uint256 _requiredSignatures) Ownable(msg.sender) EIP712("RowanFi Oracle", "1") {
         requiredSignatures = _requiredSignatures;
     }
 
     struct ReferenceData {
-        uint lastData;
-        uint timestamp;
-        uint heartbeat;
+        uint256 lastData;
+        uint256 timestamp;
+        uint256 heartbeat;
     }
 
     function setKeeper(address _keeper, bool _isKeeper) external onlyOwner {
@@ -47,52 +45,37 @@ contract Oracle is Ownable2Step, Pausable, EIP712 {
     }
 
     modifier onlyKeeper() {
-        require(
-            isKeeper[msg.sender],
-            "Oracle: only keeper can call this function"
-        );
+        require(isKeeper[msg.sender], "Oracle: only keeper can call this function");
         _;
     }
 
-    function setHeartbeat(address _asset, uint _heartbeat) external onlyOwner {
+    function setHeartbeat(address _asset, uint256 _heartbeat) external onlyOwner {
         referenceData[_asset].heartbeat = _heartbeat;
     }
 
-    function priceOf(
-        address _asset
-    ) external view whenNotPaused returns (uint256) {
+    function priceOf(address _asset) external view whenNotPaused returns (uint256) {
         require(
-            block.timestamp - referenceData[_asset].timestamp <=
-                referenceData[_asset].heartbeat,
+            block.timestamp - referenceData[_asset].timestamp <= referenceData[_asset].heartbeat,
             "Oracle: price not updated"
         );
         return referenceData[_asset].lastData;
     }
 
-    function updatePrice(
-        address _asset,
-        PriceMessage[] memory _priceMessages
-    ) external whenNotPaused onlyKeeper {
-        require(
-            _priceMessages.length >= requiredSignatures,
-            "Oracle: not enough signatures"
-        );
+    function updatePrice(address _asset, PriceMessage[] memory _priceMessages) external whenNotPaused onlyKeeper {
+        require(_priceMessages.length >= requiredSignatures, "Oracle: not enough signatures");
         address[] memory seenSigners = new address[](_priceMessages.length);
-        uint[] memory priceOpinions = new uint[](_priceMessages.length);
-        for (uint i = 0; i < _priceMessages.length; i++) {
+        uint256[] memory priceOpinions = new uint256[](_priceMessages.length);
+        for (uint256 i = 0; i < _priceMessages.length; i++) {
             seenSigners[i] = validateSignatures(_asset, _priceMessages[i]);
             priceOpinions[i] = _priceMessages[i].price;
         }
         validateSigners(seenSigners);
-        uint medianPrice = median(priceOpinions);
+        uint256 medianPrice = median(priceOpinions);
         referenceData[_asset].lastData = medianPrice;
         referenceData[_asset].timestamp = block.timestamp;
     }
 
-    function validateSignatures(
-        address _asset,
-        PriceMessage memory _priceMessages
-    ) internal view returns (address) {
+    function validateSignatures(address _asset, PriceMessage memory _priceMessages) internal view returns (address) {
         // Create EIP-712 structured hash
         bytes32 structHash = keccak256(
             abi.encode(
@@ -111,51 +94,37 @@ contract Oracle is Ownable2Step, Pausable, EIP712 {
         address signer = ECDSA.recover(digest, signature);
 
         require(isKeeper[signer], "Oracle: invalid signer");
-        require(
-            block.chainid == _priceMessages.chainId,
-            "Oracle: invalid chain id"
-        );
+        require(block.chainid == _priceMessages.chainId, "Oracle: invalid chain id");
         require(_priceMessages.asset == _asset, "Oracle: wrong asset");
-        require(
-            block.timestamp - _priceMessages.timestamp <= priceDuration,
-            "Oracle: invalid timestamp"
-        );
+        require(block.timestamp - _priceMessages.timestamp <= priceDuration, "Oracle: invalid timestamp");
         return signer;
     }
 
     /// @notice Returns the EIP-712 hash for a PriceMessage (for off-chain signing)
-    function getPriceMessageHash(
-        address asset,
-        uint256 price,
-        uint256 chainId,
-        uint256 timestamp
-    ) external view returns (bytes32) {
-        bytes32 structHash = keccak256(
-            abi.encode(PRICE_MESSAGE_TYPEHASH, asset, price, chainId, timestamp)
-        );
+    function getPriceMessageHash(address asset, uint256 price, uint256 chainId, uint256 timestamp)
+        external
+        view
+        returns (bytes32)
+    {
+        bytes32 structHash = keccak256(abi.encode(PRICE_MESSAGE_TYPEHASH, asset, price, chainId, timestamp));
         return _hashTypedDataV4(structHash);
     }
 
     function validateSigners(address[] memory _seenSigners) internal pure {
         // no duplicates
-        for (uint i = 0; i < _seenSigners.length; i++) {
-            for (uint j = i + 1; j < _seenSigners.length; j++) {
-                require(
-                    _seenSigners[i] != _seenSigners[j],
-                    "Oracle: duplicate signer"
-                );
+        for (uint256 i = 0; i < _seenSigners.length; i++) {
+            for (uint256 j = i + 1; j < _seenSigners.length; j++) {
+                require(_seenSigners[i] != _seenSigners[j], "Oracle: duplicate signer");
             }
         }
     }
 
-    function median(uint[] memory _priceOpinions) internal pure returns (uint) {
+    function median(uint256[] memory _priceOpinions) internal pure returns (uint256) {
         Arrays.sort(_priceOpinions);
-        uint length = _priceOpinions.length;
-        return
-            length % 2 == 0
-                ? (_priceOpinions[length / 2 - 1] +
-                    _priceOpinions[length / 2]) / 2
-                : _priceOpinions[length / 2];
+        uint256 length = _priceOpinions.length;
+        return length % 2 == 0
+            ? (_priceOpinions[length / 2 - 1] + _priceOpinions[length / 2]) / 2
+            : _priceOpinions[length / 2];
     }
 
     function pause() external onlyOwner {

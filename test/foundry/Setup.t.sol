@@ -15,10 +15,7 @@ import {Oracle, PriceMessage} from "@oracle/Oracle.sol";
 import {Liquidator} from "@core/Liquidator.sol";
 
 contract ERC20Customized is ERC20 {
-    constructor(
-        string memory _name,
-        string memory _symbol
-    ) ERC20(_name, _symbol) {}
+    constructor(string memory _name, string memory _symbol) ERC20(_name, _symbol) {}
 
     function mint(address to, uint256 amount) external {
         _mint(to, amount);
@@ -54,7 +51,7 @@ contract Setup is TestUtils {
     uint256 public keeper4Key;
 
     function setUp() public virtual {
-        (deployer, ) = makeAddrAndKey("deployer");
+        (deployer,) = makeAddrAndKey("deployer");
         (keeper1, keeper1Key) = makeAddrAndKey("keeper1");
         (keeper2, keeper2Key) = makeAddrAndKey("keeper2");
         (keeper3, keeper3Key) = makeAddrAndKey("keeper3");
@@ -68,33 +65,20 @@ contract Setup is TestUtils {
         config.setLiquidator(address(liquidator));
 
         oracle = new Oracle(3);
-        multiAssetPosition = new MultiAssetPosition(
-            address(config),
-            address(oracle)
-        );
+        multiAssetPosition = new MultiAssetPosition(address(config), address(oracle));
 
         vm.label(address(multiAssetPosition), "POSITION");
         vm.label(address(config), "CONFIG");
         vm.label(address(oracle), "ORACLE");
 
-        for (uint i = 0; i < 5; i++) {
+        for (uint256 i = 0; i < 5; i++) {
             console.log("i", i);
-            string memory name = string(
-                abi.encodePacked("Token", Strings.toString(i))
-            );
-            string memory symbol = string(
-                abi.encodePacked("TOKEN", Strings.toString(i))
-            );
+            string memory name = string(abi.encodePacked("Token", Strings.toString(i)));
+            string memory symbol = string(abi.encodePacked("TOKEN", Strings.toString(i)));
             address _asset = address(new ERC20Customized(name, symbol));
             address _vault = address(new Vault(_asset, address(config)));
-            vm.label(
-                address(_asset),
-                string(abi.encodePacked("TOKEN", Strings.toString(i)))
-            );
-            vm.label(
-                address(_vault),
-                string(abi.encodePacked("VAULT", Strings.toString(i)))
-            );
+            vm.label(address(_asset), string(abi.encodePacked("TOKEN", Strings.toString(i))));
+            vm.label(address(_vault), string(abi.encodePacked("VAULT", Strings.toString(i))));
             assets.push(ERC20Customized(_asset));
             vaults.push(Vault(_vault));
             config.addVault(address(_vault));
@@ -103,9 +87,9 @@ contract Setup is TestUtils {
             vaults[i].setWhitelisted(address(multiAssetPosition), true);
         }
 
-        (user, ) = makeAddrAndKey("user");
-        (user1, ) = makeAddrAndKey("user1");
-        (user2, ) = makeAddrAndKey("user2");
+        (user,) = makeAddrAndKey("user");
+        (user1,) = makeAddrAndKey("user1");
+        (user2,) = makeAddrAndKey("user2");
         vm.stopPrank();
 
         _setKeepers();
@@ -142,7 +126,7 @@ contract Setup is TestUtils {
         deal(address(assets[2]), deployer, 100 ether);
         deal(address(assets[3]), deployer, 100 ether);
         vm.startPrank(deployer);
-        for (uint i = 0; i < 4; i++) {
+        for (uint256 i = 0; i < 4; i++) {
             assets[i].approve(address(vaults[i]), 100 ether);
             vaults[i].deposit(100 ether, deployer);
         }
@@ -168,11 +152,7 @@ contract Setup is TestUtils {
         vm.stopPrank();
     }
 
-    function getPMsg(
-        address asset,
-        uint256 price,
-        uint256 privateKey
-    ) public view returns (PriceMessage memory) {
+    function getPMsg(address asset, uint256 price, uint256 privateKey) public view returns (PriceMessage memory) {
         uint256 timestamp = block.timestamp;
         uint256 chainId = block.chainid;
 
@@ -181,14 +161,6 @@ contract Setup is TestUtils {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
 
-        return
-            PriceMessage({
-                asset: asset,
-                price: price,
-                chainId: chainId,
-                timestamp: timestamp,
-                signature: signature
-            });
+        return PriceMessage({asset: asset, price: price, chainId: chainId, timestamp: timestamp, signature: signature});
     }
-
 }

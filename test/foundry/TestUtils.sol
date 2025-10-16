@@ -5,7 +5,10 @@ import "forge-std/Test.sol";
 import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
-import {TransparentUpgradeableProxy, ITransparentUpgradeableProxy} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {
+    TransparentUpgradeableProxy,
+    ITransparentUpgradeableProxy
+} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 contract TestUtils is Test {
     uint256 internal _setupSnapshotId;
@@ -29,7 +32,7 @@ contract TestUtils is Test {
         _setupSnapshotId = vm.snapshot();
     }
 
-    function fromUnit(uint256 amount, uint256 unit, uint256 digit) internal pure returns (string memory result){
+    function fromUnit(uint256 amount, uint256 unit, uint256 digit) internal pure returns (string memory result) {
         if (amount - amount / (10 ** (unit - digit)) * (10 ** (unit - digit)) >= (10 ** (unit - digit) / 2)) {
             amount += (10 ** (unit - digit) / 2);
         }
@@ -82,7 +85,6 @@ contract TestUtils is Test {
         return string(result);
     }
 
-
     function balance(address account, address token) internal view returns (uint256) {
         if (token == address(0)) {
             return address(account).balance;
@@ -101,21 +103,17 @@ contract TestUtils is Test {
         return _symbol;
     }
 
-    function _makeProxy(
-        ProxyAdmin _proxyAdmin,
-        address _implementation,
-        bytes memory _data
-    ) internal returns (address payable) {
-        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(address(_implementation), address(_proxyAdmin), _data);
+    function _makeProxy(ProxyAdmin _proxyAdmin, address _implementation, bytes memory _data)
+        internal
+        returns (address payable)
+    {
+        TransparentUpgradeableProxy proxy =
+            new TransparentUpgradeableProxy(address(_implementation), address(_proxyAdmin), _data);
 
         return payable(address(proxy));
     }
 
-    function _upgradeProxy(
-        ProxyAdmin _proxyAdmin,
-        address proxy,
-        address _implementation
-    ) internal {
+    function _upgradeProxy(ProxyAdmin _proxyAdmin, address proxy, address _implementation) internal {
         ProxyAdmin(_proxyAdmin).upgradeAndCall(ITransparentUpgradeableProxy(proxy), _implementation, new bytes(0));
     }
 
@@ -141,9 +139,9 @@ contract TestUtils is Test {
         revert("Invalid month");
     }
 
-    function uintToString(uint num) public pure returns (string memory) {
+    function uintToString(uint256 num) public pure returns (string memory) {
         return Strings.toString(num);
-    } 
+    }
 
     // @dev Get timestamp from year, month, day, hour
     // @param year Year
@@ -169,10 +167,10 @@ contract TestUtils is Test {
 
         return uint40(totalDays) * 24 * 60 * 60 + hour * 3600;
     }
-    
+
     function getDate(uint40 _timestamp) public pure returns (uint16 year, uint8 month, uint8 day, uint8 hour) {
         year = 1970;
-        uint timestamp = uint256(_timestamp);
+        uint256 timestamp = uint256(_timestamp);
 
         while (timestamp >= (isLeapYear(year) ? LEAP_YEAR_SECONDS : SECONDS_PER_YEAR)) {
             timestamp -= isLeapYear(year) ? LEAP_YEAR_SECONDS : SECONDS_PER_YEAR;
@@ -192,7 +190,7 @@ contract TestUtils is Test {
         hour = uint8(timestamp / SECONDS_PER_HOUR);
     }
 
-    function roundDown(uint num, uint precision) public pure returns (uint) {
+    function roundDown(uint256 num, uint256 precision) public pure returns (uint256) {
         return num / precision * precision;
     }
 

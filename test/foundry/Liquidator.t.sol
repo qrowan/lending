@@ -27,37 +27,20 @@ contract LiquidatorTest is Base {
         vm.stopPrank();
 
         // update price. collataral value decreases by 75%
-        uint currentPrice = oracle.priceOf(address(assets[0]));
+        uint256 currentPrice = oracle.priceOf(address(assets[0]));
         _updatePrice(address(assets[0]), currentPrice / 8);
 
         // liquidate
         vm.startPrank(user2);
         deal(address(assets[1]), user2, 0.5 ether);
         RepayData[] memory repayData = new RepayData[](1);
-        repayData[0] = RepayData({
-            vToken: address(vaults[1]),
-            amount: 0.5 ether
-        });
+        repayData[0] = RepayData({vToken: address(vaults[1]), amount: 0.5 ether});
         RewardData[] memory rewardData = new RewardData[](1);
-        rewardData[0] = RewardData({
-            vToken: address(vaults[0]),
-            amount: 0.1 ether
-        });
-        LiquidateData memory liquidateData = LiquidateData({
-            repayData: repayData,
-            rewardData: rewardData,
-            receiver: user2,
-            payer: user2
-        });
-        IERC20(address(assets[1])).approve(
-            address(multiAssetPosition),
-            0.5 ether
-        );
-        liquidator.liquidate(
-            address(multiAssetPosition),
-            tokenId,
-            abi.encode(liquidateData)
-        );
+        rewardData[0] = RewardData({vToken: address(vaults[0]), amount: 0.1 ether});
+        LiquidateData memory liquidateData =
+            LiquidateData({repayData: repayData, rewardData: rewardData, receiver: user2, payer: user2});
+        IERC20(address(assets[1])).approve(address(multiAssetPosition), 0.5 ether);
+        liquidator.liquidate(address(multiAssetPosition), tokenId, abi.encode(liquidateData));
         vm.stopPrank();
     }
 }

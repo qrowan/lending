@@ -7,6 +7,7 @@ import {ERC20Mock} from "lib/openzeppelin-contracts/contracts/mocks/token/ERC20M
 import {InterestRate} from "../../src/constants/InterestRate.sol";
 import {Base} from "./Base.t.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+
 contract PositionTest is Base {
     function test_metadata() public view {
         console.log("name", multiAssetPosition.name());
@@ -19,10 +20,7 @@ contract PositionTest is Base {
         _test_deposit(user1, asset, amount);
         vm.startPrank(user1);
         uint256 tokenId = multiAssetPosition.mint(user1);
-        IERC20(address(vaultOf(asset))).transfer(
-            address(multiAssetPosition),
-            amount
-        );
+        IERC20(address(vaultOf(asset))).transfer(address(multiAssetPosition), amount);
         multiAssetPosition.supply(tokenId, address(vaultOf(asset)));
         vm.stopPrank();
         return tokenId;
@@ -72,8 +70,7 @@ contract PositionTest is Base {
         multiAssetPosition.borrow(tokenId, address(vaults[3]), 0.1 ether);
         vm.stopPrank();
 
-        (address[] memory vaults, int[] memory amounts) = multiAssetPosition
-            .getPosition(tokenId);
+        (address[] memory vaults, int256[] memory amounts) = multiAssetPosition.getPosition(tokenId);
         assertEq(vaults.length, 4);
         assertEq(amounts.length, 4);
         assertEq(vaults[0], address(vaults[0]));
