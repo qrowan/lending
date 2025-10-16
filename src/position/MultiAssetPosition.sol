@@ -251,12 +251,12 @@ contract MultiAssetPosition is IPosition, ERC721, Ownable2Step, ReentrancyGuard 
         for (uint256 i = 0; i < liquidateData.repayData.length; i++) {
             _repay(_tokenId, liquidateData.repayData[i].vToken, liquidateData.repayData[i].amount, liquidateData.payer);
             repaidValue += liquidateData.repayData[i].amount
-                * IOracle(oracle).priceOf(IVault(liquidateData.repayData[i].vToken).asset());
+            * IOracle(oracle).priceOf(IVault(liquidateData.repayData[i].vToken).asset());
         }
         for (uint256 i = 0; i < liquidateData.rewardData.length; i++) {
             _withdraw(_tokenId, liquidateData.rewardData[i].vToken, liquidateData.rewardData[i].amount);
             rewardValue += liquidateData.rewardData[i].amount
-                * IOracle(oracle).priceOf(IVault(liquidateData.rewardData[i].vToken).asset());
+            * IOracle(oracle).priceOf(IVault(liquidateData.rewardData[i].vToken).asset());
         }
         (uint256 collateralAfter, uint256 debtAfter) = health(_tokenId);
 

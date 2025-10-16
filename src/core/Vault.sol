@@ -37,7 +37,9 @@ contract Vault is ERC4626, ERC20Votes, Ownable2Step, ReentrancyGuard {
     constructor(address _asset, address _config)
         Ownable(msg.sender)
         ERC4626(IERC20(_asset))
-        ERC20(string.concat("Vault ", IERC20Metadata(_asset).name()), string.concat("v", IERC20Metadata(_asset).symbol()))
+        ERC20(
+            string.concat("Vault ", IERC20Metadata(_asset).name()), string.concat("v", IERC20Metadata(_asset).symbol())
+        )
         EIP712(string.concat("Vault-", Strings.toHexString(_asset)), "1")
     {
         config = _config;

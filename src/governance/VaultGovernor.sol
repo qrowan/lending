@@ -17,7 +17,14 @@ contract VaultGovernor is Governor, GovernorVotes, GovernorCountingSimple {
         return 50400; // 1 week assuming 12s block time
     }
 
-    function quorum(uint256 /* blockNumber */ ) public pure override returns (uint256) {
+    function quorum(
+        uint256 /* blockNumber */
+    )
+        public
+        pure
+        override
+        returns (uint256)
+    {
         return 1; // Minimum 1 vote for MVP
     }
 

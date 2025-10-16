@@ -266,11 +266,7 @@ contract OracleTest is Base {
 
         PriceMessage[] memory pMsg = new PriceMessage[](3);
         pMsg[0] = PriceMessage({
-            asset: testAsset,
-            price: price,
-            chainId: block.chainid,
-            timestamp: oldTimestamp,
-            signature: signature
+            asset: testAsset, price: price, chainId: block.chainid, timestamp: oldTimestamp, signature: signature
         });
         pMsg[1] = getPMsg(testAsset, price, keeper2Key);
         pMsg[2] = getPMsg(testAsset, price, keeper3Key);

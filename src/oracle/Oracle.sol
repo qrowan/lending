@@ -122,9 +122,10 @@ contract Oracle is Ownable2Step, Pausable, EIP712 {
     function median(uint256[] memory _priceOpinions) internal pure returns (uint256) {
         Arrays.sort(_priceOpinions);
         uint256 length = _priceOpinions.length;
-        return length % 2 == 0
-            ? (_priceOpinions[length / 2 - 1] + _priceOpinions[length / 2]) / 2
-            : _priceOpinions[length / 2];
+        return
+            length % 2 == 0
+                ? (_priceOpinions[length / 2 - 1] + _priceOpinions[length / 2]) / 2
+                : _priceOpinions[length / 2];
     }
 
     function pause() external onlyOwner {
