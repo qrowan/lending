@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
-import {Ownable2Step} from "lib/openzeppelin-contracts/contracts/access/Ownable2Step.sol";
-import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
-import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
-import {ERC4626} from "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC4626.sol";
-import {ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
-import {ERC20Votes} from "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC20Votes.sol";
-import {EIP712} from "lib/openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
-import {Strings} from "lib/openzeppelin-contracts/contracts/utils/Strings.sol";
-import {IERC20Metadata} from "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {InterestRate} from "../constants/InterestRate.sol";
-import {IConfig} from "./Config.sol";
-import {SafeERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
-import {VaultGovernor} from "../governance/VaultGovernor.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
+import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {InterestRate} from "@constants/InterestRate.sol";
+import {IConfig} from "@core/Config.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {VaultGovernor} from "@governance/VaultGovernor.sol";
 
 interface IVault {
     function borrow(uint256 _borrowAmount, address _receiver) external;
@@ -27,8 +27,8 @@ contract Vault is ERC4626, ERC20Votes, Ownable2Step, ReentrancyGuard {
     address constant DEAD_ADDRESS =
         address(0x000000000000000000000000000000000000dEaD);
     uint public interestRatePerSecond = InterestRate.INTEREST_RATE_15;
-    uint public lentAmountStored; // TODO: private
-    uint public lastUpdated; // TODO: private
+    uint public lentAmountStored;
+    uint public lastUpdated;
     address public config;
     mapping(address => bool) public isWhitelisted;
     address public governor;
@@ -72,6 +72,7 @@ contract Vault is ERC4626, ERC20Votes, Ownable2Step, ReentrancyGuard {
     function setInterestRate(
         uint _interestRatePerSecond
     ) external onlyGovernanceOrOwner {
+        // TODO: should be delayed. or restricted with some conditions.
         lentAmountStored = lentAssets();
         lastUpdated = block.timestamp;
         interestRatePerSecond = _interestRatePerSecond;

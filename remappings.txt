@@ -1,0 +1,6 @@
+@openzeppelin/=lib/openzeppelin-contracts/
+@core/=src/core/
+@position/=src/position/
+@governance/=src/governance/
+@constants/=src/constants/
+@oracle/=src/oracle/
