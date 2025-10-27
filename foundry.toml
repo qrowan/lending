@@ -1,13 +1,13 @@
 [profile.default]
 eth_rpc_url = "https://arb1.arbitrum.io/rpc"
 optimizer = true
-opt_level = "200"
+optimizer_runs = 200
 out = "out"
 solc = "0.8.22"
 test = "test/foundry"
 src = 'src'
 libs = ["lib"]
-viaIR=true
+viaIR=false
 remappings = [
     "@openzeppelin/=lib/openzeppelin-contracts/",
     "@core/=src/core/",

@@ -30,6 +30,8 @@ contract Oracle is Ownable2Step, Pausable, EIP712 {
     uint256 public requiredSignatures;
     uint256 public priceDuration = 10 seconds;
 
+    error OnlyKeeper();
+
     constructor(uint256 _requiredSignatures) Ownable(msg.sender) EIP712("RowanFi Oracle", "1") {
         requiredSignatures = _requiredSignatures;
     }
@@ -45,8 +47,14 @@ contract Oracle is Ownable2Step, Pausable, EIP712 {
     }
 
     modifier onlyKeeper() {
-        require(isKeeper[msg.sender], "Oracle: only keeper can call this function");
+        _onlyKeeper();
         _;
+    }
+
+    function _onlyKeeper() internal view {
+        if (!isKeeper[msg.sender]) {
+            revert OnlyKeeper();
+        }
     }
 
     function setHeartbeat(address _asset, uint256 _heartbeat) external onlyOwner {
@@ -77,15 +85,17 @@ contract Oracle is Ownable2Step, Pausable, EIP712 {
 
     function validateSignatures(address _asset, PriceMessage memory _priceMessages) internal view returns (address) {
         // Create EIP-712 structured hash
-        bytes32 structHash = keccak256(
-            abi.encode(
-                PRICE_MESSAGE_TYPEHASH,
-                _priceMessages.asset,
-                _priceMessages.price,
-                _priceMessages.chainId,
-                _priceMessages.timestamp
-            )
-        );
+        bytes32 typeHash = PRICE_MESSAGE_TYPEHASH;
+        bytes32 structHash;
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, typeHash)
+            mstore(add(ptr, 0x20), mload(add(_priceMessages, 0x00))) // asset
+            mstore(add(ptr, 0x40), mload(add(_priceMessages, 0x20))) // price
+            mstore(add(ptr, 0x60), mload(add(_priceMessages, 0x40))) // chainId
+            mstore(add(ptr, 0x80), mload(add(_priceMessages, 0x60))) // timestamp
+            structHash := keccak256(ptr, 0xa0)
+        }
 
         // Create EIP-712 typed data hash
         bytes32 digest = _hashTypedDataV4(structHash);
@@ -101,12 +111,22 @@ contract Oracle is Ownable2Step, Pausable, EIP712 {
     }
 
     /// @notice Returns the EIP-712 hash for a PriceMessage (for off-chain signing)
-    function getPriceMessageHash(address asset, uint256 price, uint256 chainId, uint256 timestamp)
+    function getPriceMessageHash(address asset, uint256 price, uint256 chainId, uint256 _timestamp)
         external
         view
         returns (bytes32)
     {
-        bytes32 structHash = keccak256(abi.encode(PRICE_MESSAGE_TYPEHASH, asset, price, chainId, timestamp));
+        bytes32 typeHash = PRICE_MESSAGE_TYPEHASH;
+        bytes32 structHash;
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, typeHash)
+            mstore(add(ptr, 0x20), asset)
+            mstore(add(ptr, 0x40), price)
+            mstore(add(ptr, 0x60), chainId)
+            mstore(add(ptr, 0x80), _timestamp)
+            structHash := keccak256(ptr, 0xa0)
+        }
         return _hashTypedDataV4(structHash);
     }
 

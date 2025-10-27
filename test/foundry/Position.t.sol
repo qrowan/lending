@@ -1,50 +1,50 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {Test, console} from "forge-std/Test.sol";
-import {Vault} from "../../src/core/Vault.sol";
-import {ERC20Mock} from "lib/openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
-import {InterestRate} from "../../src/constants/InterestRate.sol";
+import {console} from "forge-std/Test.sol";
 import {Base} from "./Base.t.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract PositionTest is Base {
-    function test_metadata() public view {
+    using SafeERC20 for IERC20;
+
+    function test_Metadata_DisplaysCorrectly_WhenPositionCreated() public view {
         console.log("name", multiAssetPosition.name());
         console.log("symbol", multiAssetPosition.symbol());
     }
 
-    function test_supply() public returns (uint256) {
+    function test_Supply_Succeeds_WhenValidTokenProvided() public returns (uint256) {
         address asset = address(assets[0]);
         uint256 amount = 1 ether;
-        _test_deposit(user1, asset, amount);
+        _testDeposit(user1, asset, amount);
         vm.startPrank(user1);
         uint256 tokenId = multiAssetPosition.mint(user1);
-        IERC20(address(vaultOf(asset))).transfer(address(multiAssetPosition), amount);
+        IERC20(address(vaultOf(asset))).safeTransfer(address(multiAssetPosition), amount);
         multiAssetPosition.supply(tokenId, address(vaultOf(asset)));
         vm.stopPrank();
         return tokenId;
     }
 
-    function test_borrow() public returns (uint256) {
+    function test_Borrow_Succeeds_WhenSufficientCollateral() public returns (uint256) {
         address asset = address(assets[1]);
-        uint256 tokenId = test_supply();
+        uint256 tokenId = test_Supply_Succeeds_WhenValidTokenProvided();
         vm.startPrank(user1);
         multiAssetPosition.borrow(tokenId, address(vaultOf(asset)), 0.1 ether);
         vm.stopPrank();
         return tokenId;
     }
 
-    function test_repay() public {
+    function test_Repay_Succeeds_WhenDebtExists() public {
         address asset = address(assets[1]);
-        uint256 tokenId = test_borrow();
+        uint256 tokenId = test_Borrow_Succeeds_WhenSufficientCollateral();
         vm.startPrank(user1);
         IERC20(asset).approve(address(multiAssetPosition), 0.1 ether);
         multiAssetPosition.repay(tokenId, address(vaultOf(asset)), 0.1 ether);
         vm.stopPrank();
     }
 
-    function test_multiAssetPosition() public {
+    function test_MultiAssetPosition_TracksCorrectly_WhenMultipleAssetsUsed() public {
         vm.startPrank(user1); // LP
         for (uint256 i = 0; i < assets.length; i++) {
             deal(address(assets[i]), user1, 100 ether);

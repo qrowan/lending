@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {Test, console} from "forge-std/Test.sol";
-import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
-import {InterestRate} from "@constants/InterestRate.sol";
 import {Base} from "./Base.t.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Oracle, PriceMessage} from "@oracle/Oracle.sol";
@@ -25,7 +22,7 @@ contract OracleTest is Base {
 
     // ============ Basic Oracle Functionality Tests ============
 
-    function test_setKeeper() public {
+    function test_SetKeeper_UpdatesCorrectly_WhenCalledByOwner() public {
         vm.startPrank(deployer);
         oracle.setKeeper(keeper1, true);
         oracle.setKeeper(keeper2, true);
@@ -38,7 +35,7 @@ contract OracleTest is Base {
         vm.stopPrank();
     }
 
-    function test_setHeartbeat() public {
+    function test_SetHeartbeat_UpdatesCorrectly_WhenCalledByOwner() public {
         vm.startPrank(deployer);
         oracle.setHeartbeat(address(assets[0]), 1000);
         (,, uint256 heartbeat) = oracle.referenceData(address(assets[0]));
@@ -46,9 +43,9 @@ contract OracleTest is Base {
         vm.stopPrank();
     }
 
-    function test_updatePrice() public {
-        test_setKeeper();
-        test_setHeartbeat();
+    function test_UpdatePrice_Succeeds_WhenValidSignaturesProvided() public {
+        test_SetKeeper_UpdatesCorrectly_WhenCalledByOwner();
+        test_SetHeartbeat_UpdatesCorrectly_WhenCalledByOwner();
         uint256 price = (1e18 * 80000) / 1e8;
 
         PriceMessage[] memory pMsg = new PriceMessage[](3);
@@ -62,9 +59,9 @@ contract OracleTest is Base {
         vm.stopPrank();
     }
 
-    function test_PriceExpiredFail() public {
-        test_updatePrice();
-        test_setHeartbeat();
+    function test_RevertIf_PriceExpired() public {
+        test_UpdatePrice_Succeeds_WhenValidSignaturesProvided();
+        test_SetHeartbeat_UpdatesCorrectly_WhenCalledByOwner();
         vm.warp(block.timestamp + 1001);
         vm.expectRevert("Oracle: price not updated");
         oracle.priceOf(address(assets[0]));
@@ -72,9 +69,9 @@ contract OracleTest is Base {
 
     // ============ Median Price Calculation Tests ============
 
-    function test_medianPriceEven() public {
-        test_setKeeper();
-        test_setHeartbeat();
+    function test_MedianPrice_CalculatesCorrectly_WhenEvenNumberOfPrices() public {
+        test_SetKeeper_UpdatesCorrectly_WhenCalledByOwner();
+        test_SetHeartbeat_UpdatesCorrectly_WhenCalledByOwner();
 
         // Test with 4 different prices (even number)
         PriceMessage[] memory pMsg = new PriceMessage[](4);
@@ -90,9 +87,9 @@ contract OracleTest is Base {
         vm.stopPrank();
     }
 
-    function test_medianPriceOdd() public {
-        test_setKeeper();
-        test_setHeartbeat();
+    function test_MedianPrice_CalculatesCorrectly_WhenOddNumberOfPrices() public {
+        test_SetKeeper_UpdatesCorrectly_WhenCalledByOwner();
+        test_SetHeartbeat_UpdatesCorrectly_WhenCalledByOwner();
 
         // Test with 3 different prices (odd number)
         PriceMessage[] memory pMsg = new PriceMessage[](3);
@@ -109,7 +106,7 @@ contract OracleTest is Base {
 
     // ============ EIP-712 Signature Tests ============
 
-    function test_EIP712Signature() public {
+    function test_EIP712Signature_ValidatesCorrectly_WhenProperlyFormed() public {
         uint256 price = 1000e18;
 
         // Create 3 signatures for the required minimum
@@ -128,7 +125,7 @@ contract OracleTest is Base {
         assertEq(updatedTimestamp, block.timestamp);
     }
 
-    function test_EIP712DomainSeparation() public {
+    function test_EIP712DomainSeparation_WorksCorrectly_WhenDifferentDomains() public {
         uint256 price = 1000e18;
         uint256 chainId = block.chainid;
         uint256 timestamp = block.timestamp;
@@ -147,7 +144,7 @@ contract OracleTest is Base {
         assertNotEq(hash1, hash2, "Domain separation failed");
     }
 
-    function test_EIP712ReplayProtection() public {
+    function test_RevertIf_EIP712SignatureUsedOnWrongChain() public {
         uint256 price = 1000e18;
         uint256 chainId = block.chainid;
         uint256 timestamp = block.timestamp;
@@ -174,7 +171,7 @@ contract OracleTest is Base {
         oracle.updatePrice(testAsset, priceMessages);
     }
 
-    function test_EIP712TypeHashValidation() public {
+    function test_EIP712TypeHash_ValidatesCorrectly_WhenProperlyFormed() public {
         // Test that the type hash is correctly formed by verifying signature validation works
         // This indirectly tests that PRICE_MESSAGE_TYPEHASH matches the expected format
         uint256 price = 1000e18;
@@ -190,7 +187,7 @@ contract OracleTest is Base {
         oracle.updatePrice(testAsset, priceMessages);
     }
 
-    function test_InvalidEIP712Signature() public {
+    function test_RevertIf_InvalidEIP712Signature() public {
         uint256 price = 1000e18;
         uint256 chainId = block.chainid;
         uint256 timestamp = block.timestamp;
@@ -219,17 +216,17 @@ contract OracleTest is Base {
 
     // ============ Error Cases Tests ============
 
-    function test_OnlyKeeperCanUpdatePrice() public {
+    function test_RevertIf_NonKeeperTriesToUpdatePrice() public {
         uint256 price = 1000e18;
         PriceMessage[] memory pMsg = new PriceMessage[](1);
         pMsg[0] = getPMsg(testAsset, price, testKeeperPrivateKey);
 
         // Non-keeper should fail
-        vm.expectRevert("Oracle: only keeper can call this function");
+        vm.expectRevert("OnlyKeeper()");
         oracle.updatePrice(testAsset, pMsg);
     }
 
-    function test_InsufficientSignatures() public {
+    function test_RevertIf_InsufficientSignatures() public {
         // Oracle requires 3 signatures but we only provide 1
         uint256 price = 1000e18;
         PriceMessage[] memory pMsg = new PriceMessage[](1);
@@ -240,8 +237,8 @@ contract OracleTest is Base {
         oracle.updatePrice(testAsset, pMsg);
     }
 
-    function test_DuplicateSigner() public {
-        test_setKeeper();
+    function test_RevertIf_DuplicateSigner() public {
+        test_SetKeeper_UpdatesCorrectly_WhenCalledByOwner();
         uint256 price = 1000e18;
 
         // Use same signer twice
@@ -255,8 +252,8 @@ contract OracleTest is Base {
         oracle.updatePrice(testAsset, pMsg);
     }
 
-    function test_ExpiredTimestamp() public {
-        test_setKeeper();
+    function test_RevertIf_ExpiredTimestamp() public {
+        test_SetKeeper_UpdatesCorrectly_WhenCalledByOwner();
         uint256 price = 1000e18;
         uint256 oldTimestamp = block.timestamp - 11; // Beyond 10 second limit
 
@@ -276,8 +273,8 @@ contract OracleTest is Base {
         oracle.updatePrice(testAsset, pMsg);
     }
 
-    function test_WrongAsset() public {
-        test_setKeeper();
+    function test_RevertIf_WrongAsset() public {
+        test_SetKeeper_UpdatesCorrectly_WhenCalledByOwner();
         uint256 price = 1000e18;
         address wrongAsset = makeAddr("wrongAsset");
 
@@ -293,7 +290,7 @@ contract OracleTest is Base {
 
     // ============ Pause Functionality Tests ============
 
-    function test_PauseUnpause() public {
+    function test_PauseUnpause_WorksCorrectly_WhenCalledByOwner() public {
         vm.startPrank(deployer);
 
         // Pause oracle

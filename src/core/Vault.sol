@@ -12,7 +12,6 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {InterestRate} from "@constants/InterestRate.sol";
-import {IConfig} from "@core/Config.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {VaultGovernor} from "@governance/VaultGovernor.sol";
 
@@ -48,12 +47,16 @@ contract Vault is ERC4626, ERC20Votes, Ownable2Step, ReentrancyGuard {
     }
 
     modifier onlyGovernanceOrOwner() {
+        _onlyGovernanceOrOwner();
+        _;
+    }
+
+    function _onlyGovernanceOrOwner() internal view {
         if (totalSupply() == NUMBER_OF_DEAD_SHARES) {
             require(msg.sender == owner(), "Only owner can call this function");
         } else {
             require(msg.sender == governor, "Only governance can call this function");
         }
-        _;
     }
 
     function setWhitelisted(address _contract, bool _isWhitelisted) external onlyGovernanceOrOwner {
@@ -68,8 +71,12 @@ contract Vault is ERC4626, ERC20Votes, Ownable2Step, ReentrancyGuard {
     }
 
     modifier onlyWhitelisted(address _contract) {
-        require(isWhitelisted[_contract], "Only whitelisted contract can call this function");
+        _onlyWhitelisted(_contract);
         _;
+    }
+
+    function _onlyWhitelisted(address _contract) internal view {
+        require(isWhitelisted[_contract], "Only whitelisted contract can call this function");
     }
 
     function totalAssets() public view override returns (uint256) {

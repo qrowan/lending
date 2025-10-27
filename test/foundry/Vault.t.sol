@@ -1,36 +1,38 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {Test, console} from "forge-std/Test.sol";
+import {console} from "forge-std/Test.sol";
 import {Vault} from "../../src/core/Vault.sol";
-import {ERC20Mock} from "lib/openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
 import {InterestRate} from "../../src/constants/InterestRate.sol";
 import {Base} from "./Base.t.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract VaultTest is Base {
-    function test_metadata() public view {
+    using SafeERC20 for IERC20;
+
+    function test_Metadata_DisplaysCorrectly_WhenVaultCreated() public view {
         Vault vault = vaults[0];
         console.log("name", vault.name());
         console.log("symbol", vault.symbol());
         console.log("decimals", vault.decimals());
     }
 
-    function test_deposit() public {
+    function test_Deposit_Succeeds_WhenValidAmountProvided() public {
         address asset = address(assets[0]);
-        _test_deposit(user, asset, 1 ether);
+        _testDeposit(user, asset, 1 ether);
     }
 
-    function test_withdraw() public {
+    function test_Withdraw_Succeeds_WhenValidAmountProvided() public {
         address asset = address(assets[0]);
-        _test_withdraw(user, asset, 1 ether);
+        _testWithdraw(user, asset, 1 ether);
     }
 
-    function test_prevent_inflation_attack() public {
+    function test_InflationAttack_Prevented_WhenDeadSharesExist() public {
         address asset = address(assets[0]);
         Vault vault = vaultOf(asset);
         (address attacker,) = makeAddrAndKey("attacker");
-        inflaction_attack(attacker);
+        inflactionAtack(attacker);
         deal(address(asset), user, 100e18);
         uint256 estimatedBefore = estimateBalance(asset, user);
         vm.startPrank(user);
@@ -41,7 +43,7 @@ contract VaultTest is Base {
         assertGt(estimatedAfter, (estimatedBefore * 99) / 100, "attacked");
     }
 
-    function inflaction_attack(address attacker) private {
+    function inflactionAtack(address attacker) private {
         address asset = address(assets[0]);
         Vault vault = vaultOf(asset);
         deal(address(asset), attacker, 100e18 + 1);
@@ -49,7 +51,7 @@ contract VaultTest is Base {
         vm.startPrank(attacker);
         IERC20(asset).approve(address(vault), type(uint256).max);
         vault.deposit(1, attacker);
-        IERC20(asset).transfer(address(vault), 100e18);
+        IERC20(asset).safeTransfer(address(vault), 100e18);
         vm.stopPrank();
     }
 
@@ -57,10 +59,10 @@ contract VaultTest is Base {
         return IERC20(_asset).balanceOf(_user) + vaultOf(_asset).previewRedeem(vaultOf(_asset).balanceOf(_user));
     }
 
-    function test_borrow() public {
+    function test_Borrow_AccruesInterest_WhenTimeElapses() public {
         address asset = address(assets[0]);
         Vault vault = vaultOf(asset);
-        _test_deposit(user, asset, 1 ether);
+        _testDeposit(user, asset, 1 ether);
         uint256 interestRate = InterestRate.getInterestRateForDuration(vault.interestRatePerSecond(), 86400 * 365);
         uint256 lentAmount = 0.1 ether;
         vm.startPrank(address(multiAssetPosition));
@@ -71,12 +73,12 @@ contract VaultTest is Base {
         assertEq(vault.lentAssets(), lentAmount + (lentAmount * interestRate) / InterestRate.BASE);
     }
 
-    function test_update_interest_rate() public {
+    function test_UpdateInterestRate_ChangesRate_WhenCalledByGovernor() public {
         address asset = address(assets[0]);
         Vault vault = vaultOf(asset);
 
         // Deposit initial funds
-        _test_deposit(user, asset, 10 ether);
+        _testDeposit(user, asset, 10 ether);
 
         // Borrow some amount
         uint256 lentAmount = 1 ether;

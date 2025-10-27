@@ -12,6 +12,7 @@ import {IConfig} from "@core/Config.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IPosition} from "@position/IPosition.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 interface IOracle {
     function priceOf(address _asset) external view returns (uint256);
@@ -38,6 +39,8 @@ contract MultiAssetPosition is IPosition, ERC721, Ownable2Step, ReentrancyGuard 
     using SignedMath for int256;
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
+    using SafeCast for uint256;
+    using SafeCast for int256;
 
     uint256 private _tokenIdCounter;
     address public config;
@@ -74,21 +77,38 @@ contract MultiAssetPosition is IPosition, ERC721, Ownable2Step, ReentrancyGuard 
     mapping(address => uint256) public reserves; // vToken => reserve
 
     modifier onlyVault(address _vToken) {
-        require(IConfig(config).isVault(_vToken), "Only vault can call this function");
+        _onlyVault(_vToken);
         _;
+    }
+
+    function _onlyVault(address _vToken) internal view {
+        require(IConfig(config).isVault(_vToken), "Only vault can call this function");
     }
 
     modifier onlyLiquidator() {
-        require(msg.sender == IConfig(config).getLiquidator(), "Only liquidator can call this function");
+        _onlyLiquidator();
         _;
+    }
+
+    function _onlyLiquidator() internal view {
+        require(msg.sender == IConfig(config).getLiquidator(), "Only Liquidator");
     }
 
     modifier onlyOwnerOf(uint256 _tokenId) {
-        require(ownerOf(_tokenId) == msg.sender, "Only owner can call this function");
+        _onlyOwnerOf(_tokenId);
         _;
     }
 
+    function _onlyOwnerOf(uint256 _tokenId) internal view {
+        require(ownerOf(_tokenId) == msg.sender, "Only Owner of TokenId");
+    }
+
     modifier balanceCheck(uint256 _tokenId, address _vToken, BalanceType _balanceType) {
+        _balanceCheck(_tokenId, _vToken, _balanceType);
+        _;
+    }
+
+    function _balanceCheck(uint256 _tokenId, address _vToken, BalanceType _balanceType) internal view {
         int256 balance = balances[_tokenId][_vToken];
 
         if (_balanceType == BalanceType.NO_DEBT && balance < 0) {
@@ -101,7 +121,6 @@ contract MultiAssetPosition is IPosition, ERC721, Ownable2Step, ReentrancyGuard 
         if (_balanceType == BalanceType.CREDIT && balance <= 0) {
             revert NoCredit();
         }
-        _;
     }
 
     function setMaxLiquidationBonusRate(uint256 _maxLiquidationBonusRate) external onlyOwner {
@@ -139,8 +158,8 @@ contract MultiAssetPosition is IPosition, ERC721, Ownable2Step, ReentrancyGuard 
     {
         _claim(_vToken);
         require(_amount > 0, "Amount must be greater than 0");
-        _updateBalance(_tokenId, _vToken, int256(_amount) * -1);
-        _updateReserve(_vToken, int256(_amount) * -1);
+        _updateBalance(_tokenId, _vToken, _amount.toInt256() * -1);
+        _updateReserve(_vToken, _amount.toInt256() * -1);
         IERC20(_vToken).safeTransfer(msg.sender, _amount);
 
         require(isInitializable(_tokenId), "Position is not initializable");
@@ -156,7 +175,7 @@ contract MultiAssetPosition is IPosition, ERC721, Ownable2Step, ReentrancyGuard 
         _claim(_vToken);
         require(_amount > 0, "Amount must be greater than 0");
         _addAsset(_tokenId, _vToken);
-        _updateBalance(_tokenId, _vToken, int256(_amount) * -1);
+        _updateBalance(_tokenId, _vToken, (_amount.toInt256() * -1));
         IVault(_vToken).borrow(_amount, msg.sender);
 
         require(isInitializable(_tokenId), "Position is not initializable");
@@ -173,7 +192,7 @@ contract MultiAssetPosition is IPosition, ERC721, Ownable2Step, ReentrancyGuard 
         onlyVault(_vToken)
         balanceCheck(_tokenId, _vToken, BalanceType.DEBT)
     {
-        _updateBalance(_tokenId, _vToken, int256(_amount));
+        _updateBalance(_tokenId, _vToken, _amount.toInt256());
         address asset = IVault(_vToken).asset();
         IERC20(asset).safeTransferFrom(_payer, address(this), _amount);
         IERC20(asset).approve(address(IVault(_vToken)), _amount);
@@ -192,7 +211,7 @@ contract MultiAssetPosition is IPosition, ERC721, Ownable2Step, ReentrancyGuard 
     }
 
     function _updateReserve(address _vToken, int256 _amount) private {
-        reserves[_vToken] = uint256(int256(reserves[_vToken]) + _amount);
+        reserves[_vToken] = (reserves[_vToken].toInt256() + _amount).toUint256();
     }
 
     function claim(address _vToken) public nonReentrant {

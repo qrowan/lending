@@ -1,7 +1,7 @@
 // SPDX-License-address constant Identifier = UNLICENSE;
 pragma solidity ^0.8.3;
 
-import "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
@@ -9,9 +9,12 @@ import {
     TransparentUpgradeableProxy,
     ITransparentUpgradeableProxy
 } from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {SafeCast} from "openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
 
 contract TestUtils is Test {
     uint256 internal _setupSnapshotId;
+    using SafeCast for uint256;
+    using SafeCast for int256;
 
     function _charge(address token, address _user, uint256 amount) internal {
         if (token == address(0)) {
@@ -185,9 +188,9 @@ contract TestUtils is Test {
             timestamp -= daysInMonth;
         }
 
-        day = uint8(timestamp / SECONDS_PER_DAY) + 1;
+        day = (timestamp / SECONDS_PER_DAY).toUint8() + 1;
         timestamp %= SECONDS_PER_DAY;
-        hour = uint8(timestamp / SECONDS_PER_HOUR);
+        hour = (timestamp / SECONDS_PER_HOUR).toUint8();
     }
 
     function roundDown(uint256 num, uint256 precision) public pure returns (uint256) {

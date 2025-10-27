@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {Test, console} from "forge-std/Test.sol";
-import {ERC20Mock} from "lib/openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
-import {InterestRate} from "../../src/constants/InterestRate.sol";
 import {Base} from "./Base.t.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {PriceMessage} from "../../src/oracle/Oracle.sol";
 import {LiquidateData, RepayData, RewardData} from "../../src/position/MultiAssetPosition.sol";
 
 contract LiquidatorTest is Base {
-    function test_liquidate() public {
+    function test_Liquidate_Succeeds_WhenPositionUndercollateralized() public {
         // deposit
         vm.startPrank(user1);
         deal(address(assets[0]), user1, 1 ether);

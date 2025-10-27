@@ -26,13 +26,13 @@ contract VaultVotesTest is Test {
         token.mint(charlie, 500e18);
     }
 
-    function test_InitialVotingState() public {
+    function test_InitialVotingState_ZeroVotes_WhenContractDeployed() public {
         assertEq(vault.getVotes(alice), 0);
         assertEq(vault.getVotes(bob), 0);
         assertEq(vault.delegates(alice), address(0));
     }
 
-    function test_VotingPowerAfterDeposit() public {
+    function test_VotingPower_ZeroUntilDelegation_WhenTokensDeposited() public {
         vm.startPrank(alice);
         token.approve(address(vault), 100e18);
         uint256 shares = vault.deposit(100e18, alice);
@@ -43,7 +43,7 @@ contract VaultVotesTest is Test {
         vm.stopPrank();
     }
 
-    function test_SelfDelegation() public {
+    function test_SelfDelegation_GrantsVotingPower_WhenUserDelegatesToSelf() public {
         vm.startPrank(alice);
         token.approve(address(vault), 100e18);
         uint256 shares = vault.deposit(100e18, alice);
@@ -55,7 +55,7 @@ contract VaultVotesTest is Test {
         vm.stopPrank();
     }
 
-    function test_DelegateToOther() public {
+    function test_DelegateToOther_TransfersVotingPower_WhenUserDelegatesToAnother() public {
         vm.startPrank(alice);
         token.approve(address(vault), 100e18);
         uint256 shares = vault.deposit(100e18, alice);
@@ -68,7 +68,7 @@ contract VaultVotesTest is Test {
         assertEq(vault.delegates(alice), bob);
     }
 
-    function test_MultipleDelegators() public {
+    function test_MultipleDelegators_AccumulateVotes_WhenMultipleUsersDelegateToSame() public {
         // Alice deposits and delegates to bob
         vm.startPrank(alice);
         token.approve(address(vault), 100e18);
@@ -87,7 +87,7 @@ contract VaultVotesTest is Test {
         assertEq(vault.getVotes(bob), aliceShares + charlieShares);
     }
 
-    function test_VotesChangesOverTime() public {
+    function test_VotesChanges_UpdateCorrectly_WhenBalanceChanges() public {
         vm.startPrank(alice);
         token.approve(address(vault), 200e18);
 
@@ -102,7 +102,7 @@ contract VaultVotesTest is Test {
         vm.stopPrank();
     }
 
-    function test_ClockFunction() public {
+    function test_ClockFunction_ReturnsBlockNumber_WhenCalled() public {
         assertEq(vault.clock(), uint48(block.number));
 
         vm.roll(100);

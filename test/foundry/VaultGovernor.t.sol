@@ -42,7 +42,7 @@ contract VaultGovernorTest is Test {
         vm.stopPrank();
     }
 
-    function test_GovernorBasicSettings() public {
+    function test_GovernorBasicSettings_DisplayCorrectly_WhenGovernorDeployed() public view {
         assertEq(governor.name(), "VaultGovernor");
         assertEq(governor.votingDelay(), 0);
         assertEq(governor.votingPeriod(), 50400);
@@ -50,7 +50,7 @@ contract VaultGovernorTest is Test {
         assertEq(governor.proposalThreshold(), 0);
     }
 
-    function test_CreateProposal() public {
+    function test_CreateProposal_Succeeds_WhenCalledByTokenHolder() public {
         address[] memory targets = new address[](1);
         uint256[] memory values = new uint256[](1);
         bytes[] memory calldatas = new bytes[](1);
@@ -66,7 +66,7 @@ contract VaultGovernorTest is Test {
         assertEq(uint256(governor.state(proposalId)), uint256(IGovernor.ProposalState.Active));
     }
 
-    function test_VoteOnProposal() public {
+    function test_VoteOnProposal_Succeeds_WhenProposalActive() public {
         // Create proposal
         address[] memory targets = new address[](1);
         uint256[] memory values = new uint256[](1);
@@ -96,7 +96,7 @@ contract VaultGovernorTest is Test {
         assertEq(abstainVotes, 0);
     }
 
-    function test_ExecuteProposal() public {
+    function test_ExecuteProposal_Succeeds_WhenQuorumReached() public {
         // Create proposal
         address[] memory targets = new address[](1);
         uint256[] memory values = new uint256[](1);
@@ -130,7 +130,7 @@ contract VaultGovernorTest is Test {
         assertEq(uint256(governor.state(proposalId)), uint256(IGovernor.ProposalState.Executed));
     }
 
-    function test_ProposalWithInsufficientVotes() public {
+    function test_ProposalWithInsufficientVotes_Succeeds_WhenQuorumMet() public {
         // Create a new vault with higher quorum
         VaultGovernor strictGovernor = VaultGovernor(payable(vault.governor()));
 
