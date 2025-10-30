@@ -8,6 +8,7 @@ test = "test/foundry"
 src = 'src'
 libs = ["lib"]
 viaIR=false
+match_test = "^test"
 remappings = [
     "@openzeppelin/=lib/openzeppelin-contracts/",
     "@core/=src/core/",
