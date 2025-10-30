@@ -63,12 +63,14 @@ contract MockDealHook is IDealHook {
     }
 
     function onDealCollateralWithdrawn(Deal memory) external override {
-      numberOfWithdrawn++;
+        numberOfWithdrawn++;
     }
+
     function onDealRepaid(Deal memory) external override {
-      numberOfRepaid++;
+        numberOfRepaid++;
     }
+
     function onDealLiquidated(Deal memory, Deal memory) external override {
-      numberOfLiquidated++;
+        numberOfLiquidated++;
     }
 }
