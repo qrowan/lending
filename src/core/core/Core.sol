@@ -139,6 +139,8 @@ contract Core is ICore, NonceHandler, ReentrancyGuard, DeadlineHandler, Interest
         _transferForDeal(deal, asker, bidder);
 
         IDealManager(dealManager).createDeal(deal, asker, bidder);
+        IDealHookFactory(dealHookFactory).validateDealHook(deal.dealHook);
+        IDealHook(deal.dealHook).onDealCreated(deal);
 
         emit BidTaken(bidHash, asker, bidder);
         emit AskTaken(askHash, asker, bidder);

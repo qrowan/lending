@@ -478,6 +478,8 @@ contract CoreUnitTest is Test, Base {
     // ============ Execute Tests ============
 
     function test_Execute_MatchesBidAndAsk_WhenValidOrdersProvided() public {
+      dealHookFactory.addDealHook(address(mockDealHook));
+      
         bytes memory bidSignature = getSignature(baseBid, privateKey1);
         bytes memory askSignature = getSignature(baseAsk, privateKey2);
 
