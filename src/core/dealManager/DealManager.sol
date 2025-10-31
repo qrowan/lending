@@ -174,9 +174,7 @@ contract DealManager is IDealManager, ERC721 {
 
         dealState.state.lastUpdated = currentTime;
 
-        unchecked {
-            dealState.deal.borrowAmount = principal + interest;
-        }
+        dealState.deal.borrowAmount = principal + interest;
 
         return dealState;
     }

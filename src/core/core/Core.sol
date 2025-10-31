@@ -12,9 +12,10 @@ import {DealHandler} from "../../libraries/DealHandler.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IDealManager} from "../../interfaces/IAggregatedInterfaces.sol";
 import {DeadlineHandler} from "./DeadlineHandler.sol";
+import {InterestRateHandler} from "./InterestRateHandler.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
-contract Core is ICore, NonceHandler, ReentrancyGuard, DeadlineHandler {
+contract Core is ICore, NonceHandler, ReentrancyGuard, DeadlineHandler, InterestRateHandler {
     using ECDSA for bytes32;
     using OrderEncoder for *;
     using DealHandler for *;
@@ -44,6 +45,7 @@ contract Core is ICore, NonceHandler, ReentrancyGuard, DeadlineHandler {
         external
         nonReentrant
         DeadlineHandler.checkDeadline(bidWithAccountInfo.bid.deadline)
+        InterestRateHandler.checkInterestRate(bidWithAccountInfo.bid.interestRateBid)
     {
         // msg.sender = borrower = seller = asker
         bytes32 bidHash = bidWithAccountInfo.bid.getHash();
@@ -73,6 +75,7 @@ contract Core is ICore, NonceHandler, ReentrancyGuard, DeadlineHandler {
         external
         nonReentrant
         DeadlineHandler.checkDeadline(askWithAccountInfo.ask.deadline)
+        InterestRateHandler.checkInterestRate(askWithAccountInfo.ask.interestRateAsk)
     {
         // msg.sender = lender = buyer = bidder
         bytes32 askHash = askWithAccountInfo.ask.getHash();
@@ -112,6 +115,8 @@ contract Core is ICore, NonceHandler, ReentrancyGuard, DeadlineHandler {
         external
         DeadlineHandler.checkDeadline(bidWithAccountInfo.bid.deadline)
         DeadlineHandler.checkDeadline(askWithAccountInfo.ask.deadline)
+        InterestRateHandler.checkInterestRate(bidWithAccountInfo.bid.interestRateBid)
+        InterestRateHandler.checkInterestRate(askWithAccountInfo.ask.interestRateAsk)
     {
         bytes32 askHash = askWithAccountInfo.ask.getHash();
 
