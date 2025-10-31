@@ -26,12 +26,6 @@ interface IBaseStructure {
         uint256 lastUpdated;
     }
 
-    struct AssetManagement {
-        address vault;
-        bytes4 depositMethod;
-        bytes4 withdrawMethod;
-    }
-
     struct AccountInfo {
         address account;
         uint256 nonce;
