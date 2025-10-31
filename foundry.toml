@@ -9,6 +9,7 @@ src = 'src'
 libs = ["lib"]
 viaIR=false
 match_test = "^test"
+exclude = ["**/deprecated/**"]
 remappings = [
     "@openzeppelin/=lib/openzeppelin-contracts/",
     "@core/=src/core/",

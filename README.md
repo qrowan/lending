@@ -1,171 +1,288 @@
-## Rowan-Fi Lending Protocol
+# Lending V2: Orderbook-Based Lending Protocol
 
-A decentralized lending protocol built with Solidity and Foundry, featuring governance-enabled vaults, multi-asset positions, and continuous compound interest.
+A next-generation decentralized lending protocol featuring orderbook-based lending with automated liquidity pool integration.
 
-## Overview
+## Architecture Overview
 
-This protocol consists of:
+V2 introduces a hybrid system combining:
+- **Direct P2P Trading**: Users can directly match lending orders
+- **Automated LP Pools**: Liquidity providers deposit funds managed by keepers
+- **Bot Matching**: Third-party bots (or any EOA) can match compatible orders
+- **Dual NFT Positions**: Each executed deal creates separate NFTs for buyer and seller
 
-- **Config**: Central registry for positions and vaults
-- **Vault**: ERC4626-compliant lending vaults with governance (ERC20Votes) and per-second compound interest
-- **VaultGovernor**: OpenZeppelin Governor contracts for per-vault governance
-- **MultiAssetPosition**: ERC721-based position management with multi-vault collateral/debt tracking
-- **Liquidator**: Position liquidation with configurable bonus rates
-- **Oracle**: Price oracle with signature verification
-- **InterestRate**: Interest rate calculation library with per-second compounding
+## Core Contracts
 
-## Prerequisites
+### Core.sol
+Main orderbook engine supporting P2P trading, bot-mediated matching, and liquidations.
 
-- [Foundry](https://book.getfoundry.sh/) toolkit installed
-- [Echidna](https://github.com/crytic/echidna) for fuzzing (optional)
-- Git for dependency management
+**Key Functions:**
+- `takeBid`: Execute a bid order
+- `takeAsk`: Execute an ask order  
+- `execute`: Bot-mediated order matching
+- `repay`: Repay borrowed funds (anyone can repay)
+- `withdrawCollateral`: Withdraw collateral (seller only)
+- `liquidate`: Liquidate positions
 
-## Installation
+### DealManager.sol
+ERC721 contract managing executed lending agreements as dual NFTs (one for buyer, one for seller).
 
-```shell
-# Clone the repository
-git clone <repository-url>
-cd lending
+**Key Functions:**
+- `createDeal`: Create new deal with dual NFTs
+- `getDeal`: Retrieve deal details
+- `getDealWithState`: Get deal with buyer/seller info
+- `isBuyerNft`: Check if NFT represents buyer position (even token IDs)
+- `isSellerNft`: Check if NFT represents seller position (odd token IDs)
+- `getPairedTokenId`: Get the paired NFT ID for the same deal
+- `getDealNumber`: Get deal number from token ID
+- `getSellerTokenId`: Get seller NFT ID from deal number
+- `getBuyerTokenId`: Get buyer NFT ID from deal number
+- `updateDealState`: Update deal with accrued interest
+- `burnDeal`: Burn both NFTs when deal is closed
 
-# Install dependencies
-forge install
+### DealHookFactory.sol
+Factory for managing deal hooks with efficient dual mapping.
 
-# Update git submodules
-git submodule update --init --recursive
+**Key Functions:**
+- `addDealHook`: Register new deal hook (owner only)
+- `validateDealHook`: validates existence
+
+### IDealHook Interface
+Hooks for deal lifecycle events.
+
+**Key Functions:**
+- `NAME`: Hook identifier
+- `onDealCreated`: Called when deal is created
+- `onDealRepaid`: Called when deal is repaid
+- `onDealCollateralWithdrawn`: Called when collateral is withdrawn
+- `onDealLiquidated`: Called when deal is liquidated
+
+### ILP Interface (To be implemented)
+ERC4626-compliant liquidity pools with EIP-1271 contract signature support.
+
+**Key Functions:**
+- `bond`: View bond/reserve amount
+- `interestRate`: Current interest rate
+- `addCollateral`: Add collateral to deals
+- `fee`: Fee percentage
+- `minimumDealCheck`: Validate deal parameters
+- `isKeeper`: Verify keeper authorization
+- `isValidSignature`: EIP-1271 contract signing
+
+## Data Structures
+
+### Orders
+
+#### Bid (Seller Order)
+```solidity
+struct Bid {
+    address collateralToken;        // Token offered as collateral
+    uint256 minCollateralAmount;   // Minimum collateral to provide
+    address borrowToken;            // Token to borrow
+    uint256 maxBorrowAmount;        // Maximum amount to borrow
+    uint256 interestRateBid;        // Maximum interest rate willing to pay
+    address dealHook;               // Deal hook contract address
+    uint256 deadline;               // Order expiration timestamp
+}
 ```
 
-## Usage
-
-### Build
-
-```shell
-$ forge build
+#### Ask (Buyer Order)
+```solidity
+struct Ask {
+    address collateralToken;        // Required collateral token
+    uint256 maxCollateralAmount;   // Maximum collateral to accept
+    address borrowToken;            // Token to lend
+    uint256 minBorrowAmount;        // Minimum amount to lend
+    uint256 interestRateAsk;        // Minimum interest rate required
+    address dealHook;               // Deal hook contract address
+    uint256 deadline;               // Order expiration timestamp
+}
 ```
 
-### Test
-
-```shell
-# Run all tests
-$ forge test
-
-# Run specific test file
-$ forge test --match-path test/foundry/Vault.t.sol
-
-# Run specific test function
-$ forge test --match-test test_update_interest_rate
-
-# Run tests with gas reporting
-$ forge test --gas-report
+### Deal (Executed Agreement)
+```solidity
+struct Deal {
+    address collateralToken;        // Collateral token
+    address borrowToken;            // Borrowed token
+    uint256 collateralAmount;       // Actual collateral amount
+    uint256 borrowAmount;           // Actual borrowed amount (includes accrued interest)
+    uint256 interestRate;           // Agreed interest rate
+    address dealHook;               // Deal hook contract address
+}
 ```
 
-### Fuzzing with Echidna
+### Deal State
+```solidity
+struct DealState {
+    address buyer;                  // Buyer address
+    address seller;                 // Seller address
+    uint256 lastUpdated;            // Last interest update timestamp
+}
 
-```shell
-# Install Echidna (macOS)
-$ brew install echidna
-
-# Run property-based fuzzing
-$ echidna test/echidna/VaultEchidna.sol --contract VaultEchidna --config echidna.yaml
-
-# Run assertion-based fuzzing (bug finding)
-$ echidna test/echidna/VaultAssertions.sol --contract VaultAssertions --config echidna-assertions.yaml
+struct DealWithState {
+    Deal deal;                      // Deal details
+    DealState state;                // Deal state with participants
+}
 ```
 
-### Format
+### New Data Structures
 
-```shell
-$ forge fmt
+#### BidWithAccountInfo & AskWithAccountInfo
+```solidity
+struct AccountInfo {
+    address account;               // Order signer address
+    uint nonce;                   // Account nonce for order invalidation
+}
+
+struct BidWithAccountInfo {
+    Bid bid;                      // Bid order details
+    AccountInfo accountInfo;      // Account and nonce info
+}
+
+struct AskWithAccountInfo {
+    Ask ask;                      // Ask order details  
+    AccountInfo accountInfo;      // Account and nonce info
+}
 ```
 
-### Gas Snapshots
 
-```shell
-$ forge snapshot
+## Trading Workflows
+
+### 1. P2P Direct Trading
+1. **Order Creation**: User signs bid/ask off-chain
+2. **Order Taking**: Counterparty calls `takeBid()` or `takeAsk()`
+3. **Execution**: Core validates signatures and creates deal
+4. **Dual NFT Minting**: Deal contract mints separate NFTs for buyer and seller
+
+### 2. LP Pool Trading
+1. **Liquidity Provision**: Users deposit tokens into LP pools
+2. **Keeper Management**: Authorized keepers monitor orderbook
+3. **Profitable Execution**: Keepers take profitable bids using pool funds
+4. **Yield Distribution**: Interest earnings distributed to LP token holders
+
+### 3. Bot Matching
+1. **Order Discovery**: Bots scan for compatible bid/ask pairs
+2. **Matching Execution**: Bot calls `execute(bid, ask)` 
+3. **Deal Creation**: Core validates both orders and creates deal with dual NFTs
+4. **Fee Collection**: Bot may collect matching fees
+
+### 4. Liquidation Process
+1. **Deal Monitoring**: Anyone can monitor deal health and interest accrual
+2. **Liquidation Execution**: Anyone calls `liquidate()` with repay and withdraw amounts
+3. **Debt Repayment**: Liquidator repays part/all of the debt
+4. **Collateral Seizure**: Liquidator withdraws collateral as compensation
+5. **Position Update**: Deal state updated, NFTs burned if fully closed
+
+## Signature Validation
+
+### EOA Signatures
+Standard ECDSA signature recovery for externally owned accounts.
+
+### Contract Signatures (EIP-1271)
+LP contracts implement `isValidSignature()` to enable:
+- Keeper-authorized order signing
+- Pre-approved order validation
+- Custom authorization logic
+
+Example LP signature validation:
+```solidity
+function isValidSignature(bytes32 hash, bytes memory signature) 
+    external view returns (bytes4) {
+    address signer = ECDSA.recover(hash, signature);
+    if (isKeeper(signer) && isValidOrderHash(hash)) {
+        return 0x1626ba7e; // EIP-1271 magic value
+    }
+    return 0xffffffff; // Invalid
+}
 ```
 
-### Anvil
+## Deal Hook System
 
-```shell
-$ anvil
+The `dealHook` field in orders and deals specifies which hook contract manages the deal lifecycle:
+
+- **Hook Registration**: Deal hooks are registered via `DealHookFactory`
+- **Lifecycle Events**: Hooks receive callbacks for deal creation, repayment, collateral withdrawal, and liquidation
+- **Custom Logic**: Each hook can implement custom validation and management logic
+- **Extensibility**: New deal types can be added by deploying new hook contracts
+
+Example hooks:
+- **BaseDealHook**: Abstract base contract providing common hook functionality
+- **BasicDealHook**: Standard lending implementation with margin requirements
+- **Custom Hooks**: Specialized lending products with unique terms
+
+## Security Features
+
+- **Deadline Protection**: All orders include expiration timestamps
+- **Signature Verification**: ECDSA + EIP-1271 support for EOA and contract signatures
+- **Nonce Management**: Order invalidation via nonce consumption
+- **Access Controls**: Core-only access for deal management functions
+- **Reentrancy Protection**: All external functions protected with ReentrancyGuard
+- **Interest Accrual**: Automatic compound interest calculation with overflow protection
+- **Hook Validation**: Deal hooks must be registered before use
+
+## Integration Examples
+
+### Creating a BidWithAccountInfo Order
+```solidity
+Bid memory bid = Bid({
+    collateralToken: address(WETH),
+    minCollateralAmount: 1 ether,
+    borrowToken: address(USDC),
+    maxBorrowAmount: 15000e6,
+    interestRateBid: 500, // 5% per year
+    dealHook: address(basicDealHook),
+    deadline: block.timestamp + 7 days
+});
+
+BidWithAccountInfo memory bidWithAccountInfo = BidWithAccountInfo({
+    bid: bid,
+    accountInfo: AccountInfo({
+        account: msg.sender,
+        nonce: currentNonce
+    })
+});
 ```
 
-### Deploy
+### LP Pool Interaction
+```solidity
+// Deposit into LP
+lpContract.deposit(1000e6, msg.sender);
 
-Deploy the protocol contracts:
-
-```shell
-# Deploy to testnet
-forge script script/Vault.s.sol:VaultScript --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast
-
-# For mainnet deployment, add --verify flag
-forge script script/Vault.s.sol:VaultScript --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast --verify
+// Keeper takes profitable bid
+if (lpContract.isKeeper(msg.sender)) {
+    lpContract.takeBid(profitableBidWithAccountInfo, signature);
+}
 ```
 
-### Development
+## Future Enhancements
 
-Local development with Anvil:
+- **Order Books**: On-chain order book storage and management
+- **Price Oracles**: Integration with Chainlink and other price feeds
+- **Advanced Matching**: Partial order fills and advanced matching algorithms
+- **Cross-Chain**: Support for cross-chain lending agreements
+- **Governance**: DAO governance for protocol parameters
 
-```shell
-# Start local node
-anvil
+## Development Status
 
-# Deploy to local node (in another terminal)
-forge script script/Vault.s.sol:VaultScript --rpc-url http://localhost:8545 --private-key <anvil_private_key> --broadcast
-```
+### ✅ Completed Components
+- **Core.sol**: Complete orderbook engine with P2P trading, repayment, and liquidation
+- **DealManager.sol**: ERC721 dual NFT system with efficient token management and deal burning
+- **DealHookFactory.sol**: Hook registration system with gas-optimized lookups
+- **OrderEncoder.sol**: Gas-optimized order encoding and hashing with inline assembly
+- **NonceHandler.sol**: Nonce management for order invalidation
+- **OrderSignatureVerifier.sol**: ECDSA and EIP-1271 signature validation
+- **DeadlineHandler.sol**: Order expiration validation
+- **DealHandler.sol**: Deal creation and validation logic
+- **BaseDealHook.sol**: Abstract base contract for deal hooks
+- **BasicDealHook.sol**: Standard lending hook implementation
 
-### Protocol Architecture
+### 🚧 In Progress
+- **LP.sol**: ERC4626-compliant liquidity pools (next priority)
 
-The lending protocol features a non-upgradeable, governance-enabled architecture:
-
-1. **Config Contract**: Central registry managing vault and position whitelisting
-2. **Vault Contracts**: ERC4626 + ERC20Votes lending pools with per-vault governance
-3. **VaultGovernor Contracts**: OpenZeppelin Governor for each vault (interest rate control)
-4. **MultiAssetPosition Contract**: ERC721 NFTs with multi-vault collateral/debt tracking
-5. **Liquidator Contract**: Handles position liquidations with configurable bonus rates
-6. **Oracle Contract**: Price oracle with cryptographic signature verification
-7. **Interest Rate Library**: Per-second compound interest calculations
-
-### Contract Interactions
-
-```shell
-# Vault interactions
-cast call <VAULT_ADDRESS> "totalAssets()(uint256)" --rpc-url $RPC_URL
-cast call <VAULT_ADDRESS> "interestRatePerSecond()(uint256)" --rpc-url $RPC_URL
-cast call <VAULT_ADDRESS> "getVotes(address)(uint256)" <USER_ADDRESS> --rpc-url $RPC_URL
-
-# Position interactions
-cast call <POSITION_ADDRESS> "getPosition(uint256)(address[],int256[])" <TOKEN_ID> --rpc-url $RPC_URL
-cast call <POSITION_ADDRESS> "healthFactor(uint256)(uint256)" <TOKEN_ID> --rpc-url $RPC_URL
-
-# Governance interactions
-cast call <GOVERNOR_ADDRESS> "proposalThreshold()(uint256)" --rpc-url $RPC_URL
-cast call <GOVERNOR_ADDRESS> "votingPeriod()(uint256)" --rpc-url $RPC_URL
-```
-
-### Help
-
-```shell
-forge --help
-anvil --help
-cast --help
-```
-
-## Configuration
-
-The protocol is configured for Arbitrum mainnet (see `foundry.toml`):
-
-- **RPC URL**: https://arb1.arbitrum.io/rpc  
-- **Solidity Version**: 0.8.22
-- **Optimizer**: Enabled with 200 runs
-- **Via IR**: Enabled for better optimization
-- **Architecture**: Non-upgradeable contracts with governance
-- **Testing**: Foundry + Echidna fuzzing integration
-
-## Key Features
-
-- **Per-Vault Governance**: Each vault has its own governance contract
-- **Continuous Interest**: Per-second compound interest accrual
-- **Multi-Asset Positions**: Single NFT can hold collateral/debt across multiple vaults
-- **Flexible Liquidations**: Configurable bonus rates and partial liquidations
-- **Security Testing**: Comprehensive Echidna fuzzing for invariant verification
-- **Gas Optimized**: Via-IR compilation and optimized contract patterns
+### 📋 Architecture Features
+- **Dual NFT System**: Each deal creates separate buyer and seller NFTs
+- **Hook-Based Extensibility**: Custom deal types via hook contracts
+- **Gas Optimizations**: Inline assembly for keccak256 operations
+- **Interest Accrual**: Automatic compound interest with overflow protection
+- **Flexible Repayment**: Anyone can repay on behalf of sellers
+- **Efficient Liquidation**: Combined repay + withdraw operations
+- **Comprehensive Testing**: Full unit and fuzz test coverage for all components
