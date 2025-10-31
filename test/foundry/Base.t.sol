@@ -2,8 +2,8 @@
 pragma solidity ^0.8.13;
 
 import {Test} from "forge-std/Test.sol";
-import {IBaseStructure} from "src/v2/interfaces/IAggregatedInterfaces.sol";
-import {OrderEncoder} from "src/v2/libraries/OrderEncoder.sol";
+import {IBaseStructure} from "src/interfaces/IAggregatedInterfaces.sol";
+import {OrderEncoder} from "src/libraries/OrderEncoder.sol";
 
 contract Base is Test {
     using OrderEncoder for *;

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import "../../src/core/Vault.sol";
-import "../../src/core/Config.sol";
-import "../../src/governance/VaultGovernor.sol";
-import "../../src/constants/InterestRate.sol";
+import "src/core/Vault.sol";
+import "src/core/Config.sol";
+import "src/governance/VaultGovernor.sol";
+import "src/constants/InterestRate.sol";
 import {ERC20Mock} from "lib/openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
 import {IGovernor} from "lib/openzeppelin-contracts/contracts/governance/IGovernor.sol";
 

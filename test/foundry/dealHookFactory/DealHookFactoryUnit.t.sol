@@ -2,8 +2,8 @@
 pragma solidity ^0.8.13;
 
 import {Test} from "forge-std/Test.sol";
-import {DealHookFactory} from "src/v2/core/dealManager/DealHookFactory.sol";
-import {IDealHook} from "src/v2/interfaces/IAggregatedInterfaces.sol";
+import {DealHookFactory} from "src/core/dealManager/DealHookFactory.sol";
+import {IDealHook} from "src/interfaces/IAggregatedInterfaces.sol";
 
 contract DealHookFactoryTest is Test {
     DealHookFactory internal factory;

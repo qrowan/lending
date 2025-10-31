@@ -2,12 +2,12 @@
 pragma solidity ^0.8.13;
 
 import {Test} from "forge-std/Test.sol";
-import {Core} from "src/v2/core/core/Core.sol";
-import {DealManager} from "src/v2/core/dealManager/DealManager.sol";
-import {DealHookFactory} from "src/v2/core/dealManager/DealHookFactory.sol";
-import {IBaseStructure} from "src/v2/interfaces/IAggregatedInterfaces.sol";
+import {Core} from "src/core/core/Core.sol";
+import {DealManager} from "src/core/dealManager/DealManager.sol";
+import {DealHookFactory} from "src/core/dealManager/DealHookFactory.sol";
+import {IBaseStructure} from "src/interfaces/IAggregatedInterfaces.sol";
 import {InterestRate} from "src/constants/InterestRate.sol";
-import {OrderEncoder} from "src/v2/libraries/OrderEncoder.sol";
+import {OrderEncoder} from "src/libraries/OrderEncoder.sol";
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 import {MockDealHook} from "../dealhookfactory/DealHookFactoryUnit.t.sol";
 import {Base} from "../Base.t.sol";

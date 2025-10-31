@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {Test} from "forge-std/Test.sol";
-import {DeadlineHandler} from "../../../../src/v2/core/core/DeadlineHandler.sol";
+import {DeadlineHandler} from "src/core/core/DeadlineHandler.sol";
 
 contract MockDeadlineHandler is DeadlineHandler {
     function publicCheckDeadline(uint256 deadline) external view {

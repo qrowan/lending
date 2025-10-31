@@ -2,8 +2,8 @@
 pragma solidity ^0.8.13;
 
 import {Test} from "forge-std/Test.sol";
-import {DealHandler} from "src/v2/libraries/DealHandler.sol";
-import {IBaseStructure} from "src/v2/interfaces/IAggregatedInterfaces.sol";
+import {DealHandler} from "src/libraries/DealHandler.sol";
+import {IBaseStructure} from "src/interfaces/IAggregatedInterfaces.sol";
 import {InterestRate} from "src/constants/InterestRate.sol";
 import {MockDealHook} from "../dealhookfactory/DealHookFactoryUnit.t.sol";
 

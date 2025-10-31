@@ -2,8 +2,8 @@
 pragma solidity ^0.8.13;
 
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import {IDealManager} from "../../interfaces/IAggregatedInterfaces.sol";
-import {InterestRate} from "../../../constants/InterestRate.sol";
+import {IDealManager} from "src/interfaces/IAggregatedInterfaces.sol";
+import {InterestRate} from "src/constants/InterestRate.sol";
 
 contract DealManager is IDealManager, ERC721 {
     // State variables

@@ -2,8 +2,8 @@
 pragma solidity ^0.8.13;
 
 import {Test} from "forge-std/Test.sol";
-import {DealManager} from "../../../../src/v2/core/dealManager/DealManager.sol";
-import {IBaseStructure} from "../../../../src/v2/interfaces/IAggregatedInterfaces.sol";
+import {DealManager} from "src/core/dealManager/DealManager.sol";
+import {IBaseStructure} from "src/interfaces/IAggregatedInterfaces.sol";
 import {InterestRate} from "src/constants/InterestRate.sol";
 
 contract DealManagerTest is Test {

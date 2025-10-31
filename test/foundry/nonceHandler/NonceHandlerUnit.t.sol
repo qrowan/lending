@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {Test} from "forge-std/Test.sol";
-import {NonceHandler} from "src/v2/core/core/NonceHandler.sol";
+import {NonceHandler} from "src/core/core/NonceHandler.sol";
 
 contract MockNonceHandler is NonceHandler {
     function publicConsumeNonce(address user, uint256 expectedNonce) external {

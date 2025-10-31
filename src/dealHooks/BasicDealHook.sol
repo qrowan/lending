@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {BaseDealHook} from "../core/dealManager/BaseDealHook.sol";
-import {IOracle} from "../../oracle/IOracle.sol";
+import {IOracle} from "src/oracle/IOracle.sol";
 
 contract BasicDealHook is BaseDealHook {
     uint256 public constant BASE = 10000; // 100%

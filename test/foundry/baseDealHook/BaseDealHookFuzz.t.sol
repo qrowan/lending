@@ -2,8 +2,8 @@
 pragma solidity ^0.8.13;
 
 import {Test} from "forge-std/Test.sol";
-import {BaseDealHook} from "../../../../src/v2/core/dealManager/BaseDealHook.sol";
-import {IBaseStructure} from "../../../../src/v2/interfaces/IAggregatedInterfaces.sol";
+import {BaseDealHook} from "src/core/dealManager/BaseDealHook.sol";
+import {IBaseStructure} from "src/interfaces/IAggregatedInterfaces.sol";
 
 contract MockBaseDealHook is BaseDealHook {
     constructor(address _dealHookFactory, string memory __name) BaseDealHook(_dealHookFactory, __name) {}
