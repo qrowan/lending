@@ -124,7 +124,7 @@ contract CoreUnitTest is Test, Base {
         // Add deal hook to factory to make validateDealHook pass
         dealHookFactory.addDealHook(address(mockDealHook));
 
-        bytes memory bidSignature = getSignature(baseBid, privateKey1);
+        bytes memory bidSignature = getSignature(core.getBidHash(baseBid), privateKey1);
 
         IBaseStructure.BidWithAccountInfo memory baseBidWithAccountInfo = IBaseStructure.BidWithAccountInfo({
             bid: baseBid, accountInfo: IBaseStructure.AccountInfo({account: buyer, nonce: 0})
@@ -159,7 +159,7 @@ contract CoreUnitTest is Test, Base {
         // Add deal hook to factory to make validateDealHook pass
         dealHookFactory.addDealHook(address(mockDealHook));
 
-        bytes32 bidHash = baseBid.getHash();
+        bytes32 bidHash = core.getBidHash(baseBid);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey1, bidHash);
         bytes memory bidSignature = abi.encodePacked(r, s, v);
 
@@ -183,7 +183,7 @@ contract CoreUnitTest is Test, Base {
         // Add deal hook to factory to make validateDealHook pass
         dealHookFactory.addDealHook(address(mockDealHook));
 
-        bytes memory bidSignature = getSignature(baseBid, privateKey1);
+        bytes memory bidSignature = getSignature(core.getBidHash(baseBid), privateKey1);
 
         IBaseStructure.BidWithAccountInfo memory baseBidWithAccountInfo = IBaseStructure.BidWithAccountInfo({
             bid: baseBid, accountInfo: IBaseStructure.AccountInfo({account: buyer, nonce: 0})
@@ -301,7 +301,7 @@ contract CoreUnitTest is Test, Base {
         // Add deal hook to factory to make validateDealHook pass
         dealHookFactory.addDealHook(address(mockDealHook));
 
-        bytes32 askHash = baseAsk.getHash();
+        bytes32 askHash = core.getAskHash(baseAsk);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey2, askHash);
         bytes memory askSignature = abi.encodePacked(r, s, v);
 
@@ -340,7 +340,7 @@ contract CoreUnitTest is Test, Base {
         // Add deal hook to factory to make validateDealHook pass
         dealHookFactory.addDealHook(address(mockDealHook));
 
-        bytes32 askHash = baseAsk.getHash();
+        bytes32 askHash = core.getAskHash(baseAsk);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey2, askHash);
         bytes memory askSignature = abi.encodePacked(r, s, v);
 
@@ -364,7 +364,7 @@ contract CoreUnitTest is Test, Base {
         // Add deal hook to factory to make validateDealHook pass
         dealHookFactory.addDealHook(address(mockDealHook));
 
-        bytes32 askHash = baseAsk.getHash();
+        bytes32 askHash = core.getAskHash(baseAsk);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey2, askHash);
         bytes memory askSignature = abi.encodePacked(r, s, v);
 
@@ -478,10 +478,10 @@ contract CoreUnitTest is Test, Base {
     // ============ Execute Tests ============
 
     function test_Execute_MatchesBidAndAsk_WhenValidOrdersProvided() public {
-      dealHookFactory.addDealHook(address(mockDealHook));
-      
-        bytes memory bidSignature = getSignature(baseBid, privateKey1);
-        bytes memory askSignature = getSignature(baseAsk, privateKey2);
+        dealHookFactory.addDealHook(address(mockDealHook));
+
+        bytes memory bidSignature = getSignature(core.getBidHash(baseBid), privateKey1);
+        bytes memory askSignature = getSignature(core.getAskHash(baseAsk), privateKey2);
 
         IBaseStructure.BidWithAccountInfo memory baseBidWithAccountInfo = IBaseStructure.BidWithAccountInfo({
             bid: baseBid, accountInfo: IBaseStructure.AccountInfo({account: buyer, nonce: 0})
@@ -497,8 +497,8 @@ contract CoreUnitTest is Test, Base {
         // Add deal hook to factory to make validateDealHook pass
         dealHookFactory.addDealHook(address(mockDealHook));
 
-        bytes memory bidSignature = getSignature(baseBid, privateKey1);
-        bytes memory askSignature = getSignature(baseAsk, privateKey2);
+        bytes memory bidSignature = getSignature(core.getBidHash(baseBid), privateKey1);
+        bytes memory askSignature = getSignature(core.getAskHash(baseAsk), privateKey2);
 
         IBaseStructure.BidWithAccountInfo memory baseBidWithAccountInfo = IBaseStructure.BidWithAccountInfo({
             bid: baseBid, accountInfo: IBaseStructure.AccountInfo({account: buyer, nonce: 0})
@@ -527,8 +527,8 @@ contract CoreUnitTest is Test, Base {
         uint256 borrowForBuyerBefore = bToken.balanceOf(buyer);
         uint256 borrowForSellerBefore = bToken.balanceOf(seller);
 
-        bytes memory bidSignature = getSignature(baseBid, privateKey1);
-        bytes memory askSignature = getSignature(baseAsk, privateKey2);
+        bytes memory bidSignature = getSignature(core.getBidHash(baseBid), privateKey1);
+        bytes memory askSignature = getSignature(core.getAskHash(baseAsk), privateKey2);
 
         IBaseStructure.BidWithAccountInfo memory baseBidWithAccountInfo = IBaseStructure.BidWithAccountInfo({
             bid: baseBid, accountInfo: IBaseStructure.AccountInfo({account: buyer, nonce: 0})
@@ -556,8 +556,8 @@ contract CoreUnitTest is Test, Base {
         // Add deal hook to factory to make validateDealHook pass
         dealHookFactory.addDealHook(address(mockDealHook));
 
-        bytes memory bidSignature = getSignature(baseBid, privateKey1);
-        bytes memory askSignature = getSignature(baseAsk, privateKey2);
+        bytes memory bidSignature = getSignature(core.getBidHash(baseBid), privateKey1);
+        bytes memory askSignature = getSignature(core.getAskHash(baseAsk), privateKey2);
 
         IBaseStructure.BidWithAccountInfo memory baseBidWithAccountInfo = IBaseStructure.BidWithAccountInfo({
             bid: baseBid, accountInfo: IBaseStructure.AccountInfo({account: buyer, nonce: 0})
@@ -567,8 +567,8 @@ contract CoreUnitTest is Test, Base {
         });
 
         // Calculate hashes for events
-        bytes32 bidHash = baseBid.getHash();
-        bytes32 askHash = baseAsk.getHash();
+        bytes32 bidHash = core.getBidHash(baseBid);
+        bytes32 askHash = core.getAskHash(baseAsk);
 
         // Expect BidTaken event
         vm.expectEmit(true, true, true, false);
@@ -1160,7 +1160,7 @@ contract CoreUnitTest is Test, Base {
         dealHookFactory.addDealHook(address(mockDealHook));
 
         // Create a bid and take it to generate a deal
-        bytes32 bidHash = baseBid.getHash();
+        bytes32 bidHash = core.getBidHash(baseBid);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey1, bidHash);
         bytes memory bidSignature = abi.encodePacked(r, s, v);
 
@@ -1192,7 +1192,7 @@ contract CoreUnitTest is Test, Base {
         dealHookFactory.addDealHook(address(mockDealHook));
 
         // Create a bid and take it to generate a deal
-        bytes32 bidHash = baseBid.getHash();
+        bytes32 bidHash = core.getBidHash(baseBid);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey1, bidHash);
         bytes memory bidSignature = abi.encodePacked(r, s, v);
 
@@ -1226,7 +1226,7 @@ contract CoreUnitTest is Test, Base {
         dealHookFactory.addDealHook(address(mockDealHook));
 
         // Create a bid and take it to generate a deal
-        bytes memory bidSignature = getSignature(baseBid, privateKey1);
+        bytes memory bidSignature = getSignature(core.getBidHash(baseBid), privateKey1);
 
         IBaseStructure.BidWithAccountInfo memory baseBidWithAccountInfo = IBaseStructure.BidWithAccountInfo({
             bid: baseBid, accountInfo: IBaseStructure.AccountInfo({account: buyer, nonce: 0})

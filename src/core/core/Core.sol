@@ -14,19 +14,36 @@ import {IDealManager} from "../../interfaces/IAggregatedInterfaces.sol";
 import {DeadlineHandler} from "./DeadlineHandler.sol";
 import {InterestRateHandler} from "./InterestRateHandler.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 
-contract Core is ICore, NonceHandler, ReentrancyGuard, DeadlineHandler, InterestRateHandler {
+contract Core is ICore, NonceHandler, ReentrancyGuard, DeadlineHandler, InterestRateHandler, EIP712 {
     using ECDSA for bytes32;
     using OrderEncoder for *;
     using DealHandler for *;
     using SafeERC20 for IERC20;
 
+    bytes32 constant BID_TYPEHASH = keccak256(
+        "Bid(address collateralToken,uint256 minCollateralAmount,address borrowToken,uint256 maxBorrowAmount,uint256 interestRateBid,address dealHook,uint256 deadline)"
+    );
+
+    bytes32 constant ASK_TYPEHASH = keccak256(
+        "Ask(address collateralToken,uint256 maxCollateralAmount,address borrowToken,uint256 minBorrowAmount,uint256 interestRateAsk,address dealHook,uint256 deadline)"
+    );
+
     address dealManager;
     address dealHookFactory;
 
-    constructor(address _dealManager, address _dealHookFactory) {
+    constructor(address _dealManager, address _dealHookFactory) EIP712("RowanFi V2 Core", "1") {
         dealHookFactory = _dealHookFactory;
         dealManager = _dealManager;
+    }
+
+    /**
+     * @dev Returns the domain separator for EIP-712 signatures. It is required to create hash to sign offchain.
+     * @return The domain separator used for signing
+     */
+    function DOMAIN_SEPARATOR() external view returns (bytes32) {
+        return _domainSeparatorV4();
     }
 
     // Events
@@ -48,7 +65,7 @@ contract Core is ICore, NonceHandler, ReentrancyGuard, DeadlineHandler, Interest
         InterestRateHandler.checkInterestRate(bidWithAccountInfo.bid.interestRateBid)
     {
         // msg.sender = borrower = seller = asker
-        bytes32 bidHash = bidWithAccountInfo.bid.getHash();
+        bytes32 bidHash = getBidHash(bidWithAccountInfo.bid);
 
         // Verify signature and get bidder
         address bidder =
@@ -78,7 +95,7 @@ contract Core is ICore, NonceHandler, ReentrancyGuard, DeadlineHandler, Interest
         InterestRateHandler.checkInterestRate(askWithAccountInfo.ask.interestRateAsk)
     {
         // msg.sender = lender = buyer = bidder
-        bytes32 askHash = askWithAccountInfo.ask.getHash();
+        bytes32 askHash = getAskHash(askWithAccountInfo.ask);
 
         // Verify signature and get asker
         address asker =
@@ -118,13 +135,13 @@ contract Core is ICore, NonceHandler, ReentrancyGuard, DeadlineHandler, Interest
         InterestRateHandler.checkInterestRate(bidWithAccountInfo.bid.interestRateBid)
         InterestRateHandler.checkInterestRate(askWithAccountInfo.ask.interestRateAsk)
     {
-        bytes32 askHash = askWithAccountInfo.ask.getHash();
+        bytes32 askHash = getAskHash(askWithAccountInfo.ask);
 
         // Verify signature and get asker
         address asker =
             OrderSignatureVerifier.verifyOrderSignature(askHash, askSignature, askWithAccountInfo.accountInfo.account);
 
-        bytes32 bidHash = bidWithAccountInfo.bid.getHash();
+        bytes32 bidHash = getBidHash(bidWithAccountInfo.bid);
         address bidder =
             OrderSignatureVerifier.verifyOrderSignature(bidHash, bidSignature, bidWithAccountInfo.accountInfo.account);
 
@@ -225,5 +242,51 @@ contract Core is ICore, NonceHandler, ReentrancyGuard, DeadlineHandler, Interest
         }
 
         emit Liquidated(dealNumber, msg.sender, repayAmount, withdrawAmount);
+    }
+
+    /**
+     * @dev Computes the EIP-712 hash of a Bid struct for signature verification
+     * @param bid The bid struct to hash
+     * @return The EIP-712 compliant digest
+     */
+    function getBidHash(IBaseStructure.Bid memory bid) public view returns (bytes32) {
+        bytes32 typeHash = BID_TYPEHASH;
+        bytes32 structHash;
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, typeHash)
+            mstore(add(ptr, 0x20), mload(add(bid, 0x00))) // collateralToken
+            mstore(add(ptr, 0x40), mload(add(bid, 0x20))) // minCollateralAmount
+            mstore(add(ptr, 0x60), mload(add(bid, 0x40))) // borrowToken
+            mstore(add(ptr, 0x80), mload(add(bid, 0x60))) // maxBorrowAmount
+            mstore(add(ptr, 0xa0), mload(add(bid, 0x80))) // interestRateBid
+            mstore(add(ptr, 0xc0), mload(add(bid, 0xa0))) // dealHook
+            mstore(add(ptr, 0xe0), mload(add(bid, 0xc0))) // deadline
+            structHash := keccak256(ptr, 0x100)
+        }
+        return _hashTypedDataV4(structHash);
+    }
+
+    /**
+     * @dev Computes the EIP-712 hash of an Ask struct for signature verification
+     * @param ask The ask struct to hash
+     * @return The EIP-712 compliant digest
+     */
+    function getAskHash(IBaseStructure.Ask memory ask) public view returns (bytes32) {
+        bytes32 typeHash = ASK_TYPEHASH;
+        bytes32 structHash;
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, typeHash)
+            mstore(add(ptr, 0x20), mload(add(ask, 0x00))) // collateralToken
+            mstore(add(ptr, 0x40), mload(add(ask, 0x20))) // maxCollateralAmount
+            mstore(add(ptr, 0x60), mload(add(ask, 0x40))) // borrowToken
+            mstore(add(ptr, 0x80), mload(add(ask, 0x60))) // minBorrowAmount
+            mstore(add(ptr, 0xa0), mload(add(ask, 0x80))) // interestRateAsk
+            mstore(add(ptr, 0xc0), mload(add(ask, 0xa0))) // dealHook
+            mstore(add(ptr, 0xe0), mload(add(ask, 0xc0))) // deadline
+            structHash := keccak256(ptr, 0x100)
+        }
+        return _hashTypedDataV4(structHash);
     }
 }
