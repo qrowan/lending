@@ -2,7 +2,6 @@
 pragma solidity ^0.8.13;
 
 import {Base} from "./Base.t.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Oracle, PriceMessage} from "@oracle/Oracle.sol";
 
 contract OracleTest is Base {
@@ -222,7 +221,7 @@ contract OracleTest is Base {
         pMsg[0] = getPMsg(testAsset, price, testKeeperPrivateKey);
 
         // Non-keeper should fail
-        vm.expectRevert("OnlyKeeper()");
+        vm.expectRevert(Oracle.OnlyKeeper.selector);
         oracle.updatePrice(testAsset, pMsg);
     }
 

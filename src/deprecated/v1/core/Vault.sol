@@ -13,7 +13,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {InterestRate} from "@constants/InterestRate.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {VaultGovernor} from "@governance/VaultGovernor.sol";
+import {VaultGovernor} from "src/deprecated/v1/governance/VaultGovernor.sol";
 
 interface IVault {
     function borrow(uint256 _borrowAmount, address _receiver) external;

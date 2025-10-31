@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import {Base} from "./Base.t.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {LiquidateData, RepayData, RewardData} from "../../src/position/MultiAssetPosition.sol";
+import {LiquidateData, RepayData, RewardData} from "src/deprecated/v1/position/MultiAssetPosition.sol";
 
 contract LiquidatorTest is Base {
     function test_Liquidate_Succeeds_WhenPositionUndercollateralized() public {

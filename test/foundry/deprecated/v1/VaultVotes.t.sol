@@ -3,8 +3,8 @@ pragma solidity ^0.8.13;
 
 import {Test} from "forge-std/Test.sol";
 import {ERC20Mock} from "lib/openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
-import {Vault} from "../../src/core/Vault.sol";
-import {Config} from "../../src/core/Config.sol";
+import {Vault} from "src/deprecated/v1/core/Vault.sol";
+import {Config} from "src/deprecated/v1/core/Config.sol";
 
 contract VaultVotesTest is Test {
     Vault vault;
