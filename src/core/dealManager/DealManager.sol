@@ -162,7 +162,12 @@ contract DealManager is IDealManager, ERC721 {
         return _ownerOf(tokenId) != address(0);
     }
 
-    function updateDealState(uint256 dealNumber) public onlyDealExists(dealNumber) returns (DealWithState memory) {
+    function updateDealState(uint256 dealNumber)
+        public
+        onlyDealExists(dealNumber)
+        onlyCore
+        returns (DealWithState memory)
+    {
         DealWithState storage dealState = _dealWithStates[dealNumber];
         uint256 currentTime = block.timestamp;
         uint256 timePassed = currentTime - dealState.state.lastUpdated;
