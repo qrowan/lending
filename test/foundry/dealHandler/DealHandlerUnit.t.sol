@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {DealHandler} from "src/libraries/DealHandler.sol";
 import {IBaseStructure} from "src/interfaces/IAggregatedInterfaces.sol";
 import {InterestRate} from "src/constants/InterestRate.sol";
-import {MockDealHook} from "../dealhookfactory/DealHookFactoryUnit.t.sol";
+import {MockDealHook} from "../dealHookFactory/DealHookFactoryUnit.t.sol";
 
 contract DealHandlerTest is Test {
     using DealHandler for *;

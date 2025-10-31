@@ -9,7 +9,7 @@ import {IBaseStructure} from "src/interfaces/IAggregatedInterfaces.sol";
 import {InterestRate} from "src/constants/InterestRate.sol";
 import {OrderEncoder} from "src/libraries/OrderEncoder.sol";
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
-import {MockDealHook} from "../dealhookfactory/DealHookFactoryUnit.t.sol";
+import {MockDealHook} from "../dealHookFactory/DealHookFactoryUnit.t.sol";
 import {Base} from "../Base.t.sol";
 
 contract CoreUnitTest is Test, Base {
@@ -82,8 +82,8 @@ contract CoreUnitTest is Test, Base {
             dealHook: address(mockDealHook)
         });
 
-        privateKey1 = vm.envUint("PRIVATE_KEY1");
-        privateKey2 = vm.envUint("PRIVATE_KEY2");
+        privateKey1 = vm.randomUint();
+        privateKey2 = vm.randomUint();
         buyer = vm.addr(privateKey1);
         seller = vm.addr(privateKey2);
         vm.label(buyer, "buyer");
@@ -1103,7 +1103,7 @@ contract CoreUnitTest is Test, Base {
         uint256 initialCollateral = dealBefore.collateralAmount;
 
         deal(address(bToken), address(this), repayAmount);
-        
+
         // Get initial token balances
         uint256 liquidatorCollateralBefore = cToken.balanceOf(address(this));
         uint256 liquidatorBorrowBefore = bToken.balanceOf(address(this));

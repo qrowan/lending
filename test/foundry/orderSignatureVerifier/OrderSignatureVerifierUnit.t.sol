@@ -28,9 +28,9 @@ contract OrderSignatureVerifierTest is Test {
         this.verifySignatureWrapper(hash, signature, wrongSigner);
     }
 
-    function test_VerifySignature_Succeeds_WhenEOASignatureIsValid() public view {
+    function test_VerifySignature_Succeeds_WhenEOASignatureIsValid() public {
         bytes32 hash = keccak256("test message");
-        uint256 privateKey = vm.envUint("PRIVATE_KEY1");
+        uint256 privateKey = vm.randomUint();
         address expectedSigner = vm.addr(privateKey);
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, hash);
@@ -43,7 +43,8 @@ contract OrderSignatureVerifierTest is Test {
 
     function test_RevertIf_ContractSignatureInvalidSigner() public {
         bytes32 hash = keccak256("test message");
-        uint256 privateKey = vm.envUint("PRIVATE_KEY1");
+        vm.randomUint();
+        uint256 privateKey = vm.randomUint();
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, hash);
         bytes memory signature = abi.encodePacked(r, s, v);
@@ -55,7 +56,7 @@ contract OrderSignatureVerifierTest is Test {
 
     function test_VerifySignature_Succeeds_WhenContractSignatureIsValid() public {
         bytes32 hash = keccak256("test message");
-        uint256 privateKey = vm.envUint("PRIVATE_KEY1");
+        uint256 privateKey = vm.randomUint();
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, hash);
         bytes memory signature = abi.encodePacked(r, s, v);
