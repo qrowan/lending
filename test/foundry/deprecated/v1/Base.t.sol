@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {console} from "forge-std/Test.sol";
-import {Vault} from "@core/Vault.sol";
+import {Vault} from "src/deprecated/v1/core/Vault.sol";
 import {Setup} from "./Setup.t.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 

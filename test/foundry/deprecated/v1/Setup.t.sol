@@ -2,15 +2,15 @@
 pragma solidity ^0.8.13;
 
 import {console} from "forge-std/Test.sol";
-import {Vault} from "@core/Vault.sol";
+import {Vault} from "src/deprecated/v1/core/Vault.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {TestUtils} from "./TestUtils.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import {Config} from "@core/Config.sol";
-import {MultiAssetPosition} from "@position/MultiAssetPosition.sol";
+import {Config} from "src/deprecated/v1/core/Config.sol";
+import {MultiAssetPosition} from "src/deprecated/v1/position/MultiAssetPosition.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {Oracle, PriceMessage} from "@oracle/Oracle.sol";
-import {Liquidator} from "@core/Liquidator.sol";
+import {Liquidator} from "src/deprecated/v1/core/Liquidator.sol";
 
 contract ERC20Customized is ERC20 {
     constructor(string memory _name, string memory _symbol) ERC20(_name, _symbol) {}

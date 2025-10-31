@@ -2,7 +2,6 @@
 pragma solidity ^0.8.13;
 
 import {Test} from "forge-std/Test.sol";
-import {console} from "forge-std/console.sol";
 import {Core} from "src/v2/core/core/Core.sol";
 import {DealManager} from "src/v2/core/dealManager/DealManager.sol";
 import {DealHookFactory} from "src/v2/core/dealManager/DealHookFactory.sol";
